@@ -5,8 +5,8 @@ import time
 from collections import deque
 
 import numpy as np
-from robohub_transport_server_client import RoboticsConsumer, RoboticsProducer
-from robohub_transport_server_client.video import VideoConsumer, VideoProducer
+from transport_server_client import RoboticsConsumer, RoboticsProducer
+from transport_server_client.video import VideoConsumer, VideoProducer
 
 from inference_server.models import get_inference_engine, list_supported_policies
 from inference_server.models.joint_config import JointConfig

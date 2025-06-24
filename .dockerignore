@@ -36,6 +36,7 @@ venv.bak/
 *.swp
 *.swo
 *~
+.cursor/
 
 # OS generated files
 .DS_Store
@@ -46,15 +47,21 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
-# Git
+# Git (including submodule git directories)
 .git/
 .gitignore
 .gitattributes
+.gitmodules
+external/*/.git/
+external/*/.github/
+external/*/.gitignore
+external/*/.gitattributes
 
 # Documentation
 README.md
-*.md
 docs/
+# Note: Keep README.md for submodules as they may be needed by build systems
+external/*/docs/
 
 # Test files
 tests/
@@ -64,6 +71,10 @@ test_*
 .coverage
 htmlcov/
 .tox/
+external/*/tests/
+external/*/test_*
+external/*/*_test.py
+external/*/.pytest_cache/
 
 # Logs
 *.log
@@ -96,6 +107,10 @@ docker-compose*.yml
 .gitlab-ci.yml
 .travis.yml
 .circleci/
+external/*/.github/
+external/*/.gitlab-ci.yml
+external/*/.travis.yml
+external/*/.circleci/
 
 # Large files that shouldn't be in container
 *.mp4
@@ -104,4 +119,20 @@ docker-compose*.yml
 *.mkv
 *.h264
 *.h265
-recordings/ 
+recordings/
+
+# Submodule specific exclusions
+external/*/media/
+external/*/benchmarks/
+external/*/examples/
+external/*/demo/
+external/*/client/examples/
+external/lerobot/docker/
+external/*/Makefile
+external/*/.pre-commit-config.yaml
+external/*/.dockerignore
+external/*/Dockerfile*
+external/*/test-docker.sh
+
+# Development packages directory
+packages/ 

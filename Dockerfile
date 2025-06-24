@@ -1,10 +1,11 @@
 # Use official UV base image with Python 3.12
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
-# Set environment variables for Python
+# Set environment variables for Python and UV
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     UV_SYSTEM_PYTHON=1 \
+    UV_COMPILE_BYTECODE=1 \
     UV_CACHE_DIR=/tmp/uv-cache
 
 # Install system dependencies
@@ -34,18 +35,22 @@ RUN groupadd -r appuser && useradd -r -g appuser -m -s /bin/bash appuser
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files
-COPY --chown=appuser:appuser pyproject.toml ./
+# Copy dependency files for better layer caching
+COPY --chown=appuser:appuser pyproject.toml uv.lock* ./
 
-# Copy the external python client dependency
+# Copy external dependencies (submodules) needed for dependency resolution
 COPY --chown=appuser:appuser external/ ./external/
 
-# Install Python dependencies (without --frozen to regenerate lock)
+# Install dependencies first (better caching)
 RUN --mount=type=cache,target=/tmp/uv-cache \
-    uv sync --no-dev
+    uv sync --locked --no-install-project --no-dev
 
-# Copy the entire project
+# Copy the rest of the application
 COPY --chown=appuser:appuser . .
+
+# Install the project in non-editable mode for production
+RUN --mount=type=cache,target=/tmp/uv-cache \
+    uv sync --locked --no-editable --no-dev
 
 # Switch to non-root user
 USER appuser
@@ -56,9 +61,9 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Expose port 7860 (HuggingFace Spaces default)
 EXPOSE 7860
 
-# Health check using activated virtual environment (FastAPI health endpoint)
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:7860/api/health')" || exit 1
 
-# Run the application with activated virtual environment
+# Run the application
 CMD ["python", "launch_simple.py", "--host", "0.0.0.0", "--port", "7860"] 

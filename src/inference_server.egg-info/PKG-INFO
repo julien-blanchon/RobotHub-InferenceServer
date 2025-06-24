@@ -14,7 +14,7 @@ Requires-Dist: httpx>=0.28.1
 Requires-Dist: huggingface-hub>=0.32.4
 Requires-Dist: imageio[ffmpeg]>=2.37.0
 Requires-Dist: lerobot
-Requires-Dist: lerobot-arena-client
+Requires-Dist: robohub-transport-server-client
 Requires-Dist: numpy>=1.26.4
 Requires-Dist: opencv-python>=4.11.0.86
 Requires-Dist: opencv-python-headless>=4.11.0.86

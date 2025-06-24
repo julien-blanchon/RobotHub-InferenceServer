@@ -1125,7 +1125,7 @@ dependencies = [
     { name = "psutil" },
     { name = "pydantic" },
     { name = "python-multipart" },
-    { name = "robohub-transport-server-client" },
+    { name = "robothub-transport-server-client" },
     { name = "torch" },
     { name = "torchvision" },
     { name = "tqdm" },
@@ -1160,7 +1160,7 @@ requires-dist = [
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "pydantic", specifier = ">=2.11.5" },
     { name = "python-multipart", specifier = ">=0.0.20" },
-    { name = "robohub-transport-server-client", editable = "../transport-server/client/python" },
+    { name = "robothub-transport-server-client", editable = "external/RobotHub-TransportServer/client/python" },
     { name = "torch", specifier = ">=2.2.2" },
     { name = "torchvision", specifier = ">=0.17.2" },
     { name = "tqdm", specifier = ">=4.67.1" },
@@ -2566,9 +2566,9 @@ wheels = [
 ]
 
 [[package]]
-name = "robohub-transport-server-client"
+name = "robothub-transport-server-client"
 version = "1.0.0"
-source = { editable = "../transport-server/client/python" }
+source = { editable = "external/RobotHub-TransportServer/client/python" }
 dependencies = [
     { name = "aiohttp" },
     { name = "aiortc" },

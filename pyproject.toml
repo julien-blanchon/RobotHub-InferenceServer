@@ -15,7 +15,7 @@ dependencies = [
     "huggingface-hub>=0.32.4",
     "imageio[ffmpeg]>=2.37.0",
     "lerobot",
-    "robohub-transport-server-client",
+    "robothub-transport-server-client",
     "numpy>=1.26.4",
     "opencv-python>=4.11.0.86",
     "opencv-python-headless>=4.11.0.86",
@@ -39,5 +39,5 @@ dev = [
 ]
 
 [tool.uv.sources]
-robohub-transport-server-client = { path = "../transport-server/client/python", editable = true }
+robothub_transport_server_client = { path = "./external/RobotHub-TransportServer/client/python", editable = true }
 lerobot = { path = "./external/lerobot", editable = false }

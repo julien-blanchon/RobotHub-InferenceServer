@@ -264,7 +264,7 @@ def launch_simple_integrated_app(
 
     # Add custom root endpoint that redirects to /gradio/ (with trailing slash)
     @app.get("/")
-    async def root():
+    def root_redirect():
         return RedirectResponse(url="/gradio/", status_code=302)
 
     # Launch with uvicorn

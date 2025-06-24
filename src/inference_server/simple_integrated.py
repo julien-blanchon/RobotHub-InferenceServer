@@ -4,7 +4,6 @@ import time
 
 import gradio as gr
 import uvicorn
-from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import our existing components
@@ -200,6 +199,7 @@ def create_simple_gradio_interface() -> gr.Blocks:
         title="🤖 Robot AI Control Center",
         theme=gr.themes.Soft(),
         css=".gradio-container { max-width: 1200px !important; }",
+        fill_height=True,
     ) as demo:
         gr.Markdown("""
         # 🤖 Robot AI Control Center
@@ -327,36 +327,6 @@ def create_simple_gradio_interface() -> gr.Blocks:
     return demo
 
 
-def create_integrated_app() -> FastAPI:
-    """Create integrated FastAPI app with Gradio mounted and API at /api."""
-    # Create main FastAPI app
-    main_app = FastAPI(
-        title="🤖 Robot AI Control Center",
-        description="Integrated ACT Model Inference Server with Web Interface",
-        version="1.0.0",
-    )
-
-    # Add CORS middleware
-    main_app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-    # Mount the FastAPI AI server under /api
-    main_app.mount("/api", fastapi_app)
-
-    # Create and mount Gradio interface
-    gradio_app = create_simple_gradio_interface()
-
-    # Mount Gradio as the main interface
-    main_app = gr.mount_gradio_app(main_app, gradio_app, path="/")
-
-    return main_app
-
-
 def launch_simple_integrated_app(
     host: str = "localhost", port: int = DEFAULT_PORT, share: bool = False
 ):
@@ -367,15 +337,33 @@ def launch_simple_integrated_app(
     print(f"🔄 Health Check: http://{host}:{port}/api/health")
     print("🔧 Direct session management + API access!")
 
-    # Create integrated app
-    app = create_integrated_app()
+    # Create Gradio demo
+    demo = create_simple_gradio_interface()
 
-    # Launch with uvicorn
-    uvicorn.run(
-        app,
-        host=host,
-        port=port,
-        log_level="info",
+    # Create custom FastAPI app from the Gradio demo's built-in app
+    app = demo.app
+
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Mount the FastAPI AI server under /api
+    app.mount("/api", fastapi_app)
+
+    # Launch using Gradio's queue and launch methods
+    demo.queue()
+    demo.launch(
+        server_name=host,
+        server_port=port,
+        share=share,
+        show_error=True,
+        show_api=False,  # Hide Gradio's default API docs since we have our own
+        prevent_thread_lock=False,
     )
 
 

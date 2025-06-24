@@ -4,7 +4,9 @@ import time
 
 import gradio as gr
 import uvicorn
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 # Import our existing components
 from inference_server.main import app as fastapi_app
@@ -30,165 +32,23 @@ def start_api_server_thread(port: int = 8001):
 
     def run_server():
         global server_started
-        from inference_server.main import app
-
         try:
-            uvicorn.run(app, host="localhost", port=port, log_level="warning")
+            # Import here to avoid circular imports
+            from inference_server.main import app
+
+            logger.info(f"Starting AI server on port {port}")
+            uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
         except Exception as e:
-            logger.exception(f"API server error: {e}")
+            logger.exception(f"Failed to start AI server: {e}")
         finally:
             server_started = False
 
     server_thread = threading.Thread(target=run_server, daemon=True)
     server_thread.start()
+    server_started = True
 
     # Wait a moment for server to start
     time.sleep(2)
-    server_started = True
-
-
-class SimpleServerManager:
-    """Direct access to session manager without HTTP calls."""
-
-    def __init__(self):
-        self.session_manager = session_manager
-
-    async def create_and_start_session(
-        self,
-        session_id: str,
-        policy_path: str,
-        camera_names: str,
-        arena_server_url: str,
-    ) -> str:
-        """Create and start a session directly."""
-        try:
-            cameras = [name.strip() for name in camera_names.split(",") if name.strip()]
-            if not cameras:
-                cameras = ["front"]
-
-            # Create session directly
-            room_info = await self.session_manager.create_session(
-                session_id=session_id,
-                policy_path=policy_path,
-                camera_names=cameras,
-                arena_server_url=arena_server_url,
-            )
-
-            # Start the session
-            await self.session_manager.start_inference(session_id)
-
-            # Format camera rooms more clearly
-            camera_info = []
-            for camera_name, room_id in room_info["camera_room_ids"].items():
-                camera_info.append(f"  📹 **{camera_name.title()}**: `{room_id}`")
-
-            return f"""## ✅ Session Created Successfully!
-
-**Session ID**: `{session_id}`
-**Status**: 🟢 **RUNNING** (inference active)
-
-### 📡 Arena Connection Details:
-**Workspace ID**: `{room_info["workspace_id"]}`
-
-**Camera Rooms**:
-{chr(10).join(camera_info)}
-
-**Joint Communication**:
-  📥 **Input**: `{room_info["joint_input_room_id"]}`
-  📤 **Output**: `{room_info["joint_output_room_id"]}`
-
----
-## 🤖 Ready for Robot Control!
-Your robot can now connect to these rooms to start AI-powered control."""
-
-        except Exception as e:
-            return f"❌ Error: {e!s}"
-
-    async def control_session(self, session_id: str, action: str) -> str:
-        """Control a session directly."""
-        if not session_id.strip():
-            return "⚠️ No session ID provided"
-
-        try:
-            # Check current status
-            if session_id not in self.session_manager.sessions:
-                return f"❌ Session '{session_id}' not found"
-
-            session = self.session_manager.sessions[session_id]
-            current_status = session.status
-
-            # Smart action handling
-            if action == "start" and current_status == "running":
-                return f"ℹ️ Session '{session_id}' is already running"
-            if action == "stop" and current_status in {"stopped", "ready"}:
-                return f"ℹ️ Session '{session_id}' is already stopped"
-
-            # Perform action
-            if action == "start":
-                await self.session_manager.start_inference(session_id)
-                return f"✅ Inference started for session {session_id}"
-            if action == "stop":
-                await self.session_manager.stop_inference(session_id)
-                return f"✅ Inference stopped for session {session_id}"
-            if action == "restart":
-                await self.session_manager.restart_inference(session_id)
-                return f"✅ Inference restarted for session {session_id}"
-            return f"❌ Unknown action: {action}"
-
-        except Exception as e:
-            return f"❌ Error: {e!s}"
-
-    async def get_session_status(self, session_id: str) -> str:
-        """Get session status directly."""
-        if not session_id.strip():
-            return "⚠️ No session ID provided"
-
-        try:
-            if session_id not in self.session_manager.sessions:
-                return f"❌ Session '{session_id}' not found"
-
-            session_data = await self.session_manager.get_session_status(session_id)
-            session = session_data
-
-            status_emoji = {
-                "running": "🟢",
-                "ready": "🟡",
-                "stopped": "🔴",
-                "initializing": "🟠",
-            }.get(session["status"], "⚪")
-
-            # Smart suggestions
-            suggestions = ""
-            if session["status"] == "running":
-                suggestions = "\n\n### 💡 Smart Suggestion:\n**Session is active!** Use the '⏸️ Stop' button to pause inference."
-            elif session["status"] in {"ready", "stopped"}:
-                suggestions = "\n\n### 💡 Smart Suggestion:\n**Session is ready!** Use the '▶️ Start' button to begin inference."
-
-            # Format camera names nicely
-            camera_list = [f"**{cam.title()}**" for cam in session["camera_names"]]
-
-            return f"""## {status_emoji} Session Status
-
-**Session ID**: `{session_id}`
-**Status**: {status_emoji} **{session["status"].upper()}**
-**Model**: `{session["policy_path"]}`
-**Cameras**: {", ".join(camera_list)}
-
-### 📊 Performance Metrics:
-| Metric | Value |
-|--------|-------|
-| 🧠 **Inferences** | {session["stats"]["inference_count"]} |
-| 📤 **Commands Sent** | {session["stats"]["commands_sent"]} |
-| 📋 **Queue Length** | {session["stats"]["actions_in_queue"]} actions |
-| ❌ **Errors** | {session["stats"]["errors"]} |
-
-### 🔧 Data Flow:
-- 📹 **Images Received**: {session["stats"]["images_received"]}
-- 🤖 **Joint States Received**: {session["stats"]["joints_received"]}
-{suggestions}"""
-
-        except Exception as e:
-            return f"❌ Error: {e!s}"
 
 
 def create_simple_gradio_interface() -> gr.Blocks:
@@ -201,130 +61,170 @@ def create_simple_gradio_interface() -> gr.Blocks:
         css=".gradio-container { max-width: 1200px !important; }",
         fill_height=True,
     ) as demo:
-        gr.Markdown("""
-        # 🤖 Robot AI Control Center
-        **Control your robot with AI using ACT models**
+        gr.Markdown("# 🤖 Robot AI Control Center")
+        gr.Markdown("*Real-time ACT Model Inference for Robot Control*")
 
-        *Integrated mode - FastAPI available at `/api/docs` for direct API access*
-        """)
+        with gr.Row():
+            with gr.Column(scale=2):
+                gr.Markdown("## 🚀 Set Up Robot AI")
 
-        # Server status
-        with gr.Group():
-            gr.Markdown("## 📡 API Status")
-            gr.Markdown(
-                value="""
-                ✅ **FastAPI Server**: Available at `/api`
-                📖 **API Documentation**: Available at `/api/docs`
-                🔄 **Health Check**: Available at `/api/health`
-                """,
-                show_copy_button=True,
-            )
-
-        # Setup
-        with gr.Group():
-            gr.Markdown("## 🤖 Set Up Robot AI")
-
-            with gr.Row():
-                with gr.Column():
-                    session_id_input = gr.Textbox(
-                        label="Session Name", value="my-robot-01"
+                with gr.Group():
+                    session_name = gr.Textbox(
+                        label="Session Name",
+                        placeholder="my-robot-01",
+                        value="default-session",
                     )
-                    policy_path_input = gr.Textbox(
-                        label="AI Model Path", value="./checkpoints/act_so101_beyond"
+                    model_path = gr.Textbox(
+                        label="AI Model Path",
+                        placeholder="./checkpoints/act_so101_beyond",
+                        value="./checkpoints/act_so101_beyond",
                     )
-                    camera_names_input = gr.Textbox(label="Camera Names", value="front")
-                    arena_server_url_input = gr.Textbox(
-                        label="Arena Server URL",
-                        value=DEFAULT_ARENA_SERVER_URL,
-                        placeholder="http://localhost:8000",
-                    )
-                    create_btn = gr.Button(
-                        "🎯 Create & Start AI Control", variant="primary"
+                    camera_names = gr.Textbox(
+                        label="Camera Names (comma-separated)",
+                        placeholder="front,wrist,overhead",
+                        value="front,wrist",
                     )
 
-                with gr.Column():
-                    setup_result = gr.Markdown(
-                        value="Ready to create your robot AI session...",
-                        show_copy_button=True,
-                        container=True,
-                        height=300,
-                    )
+                create_btn = gr.Button(
+                    "🎯 Create & Start AI Control", variant="primary"
+                )
 
-        # Control
-        with gr.Group():
-            gr.Markdown("## 🎮 Control Session")
+            with gr.Column(scale=1):
+                gr.Markdown("## 📊 Control Session")
 
-            with gr.Row():
-                current_session_input = gr.Textbox(label="Session ID")
-                start_btn = gr.Button("▶️ Start", variant="primary")
-                stop_btn = gr.Button("⏸️ Stop", variant="secondary")
-                status_btn = gr.Button("📊 Status", variant="secondary")
+                session_id_input = gr.Textbox(
+                    label="Session ID",
+                    placeholder="Will be auto-filled",
+                    interactive=False,
+                )
 
-            session_status_display = gr.Markdown(
-                value="Click '📊 Status' to check session information...",
-                show_copy_button=True,
-                container=True,
-                height=400,
-            )
+                with gr.Row():
+                    start_btn = gr.Button("▶️ Start", variant="secondary")
+                    stop_btn = gr.Button("⏹️ Stop", variant="secondary")
+                    status_btn = gr.Button("📈 Status", variant="secondary")
+
+        with gr.Row():
+            output_display = gr.Markdown("### Ready to create AI session...")
 
         # Event handlers
-        async def create_session(
-            session_id, policy_path, camera_names, arena_server_url
-        ):
-            result = await server_manager.create_and_start_session(
-                session_id, policy_path, camera_names, arena_server_url
-            )
-            return result, session_id
-
-        async def start_session(session_id):
-            return await server_manager.control_session(session_id, "start")
-
-        async def stop_session(session_id):
-            return await server_manager.control_session(session_id, "stop")
-
-        async def get_status(session_id):
-            return await server_manager.get_session_status(session_id)
-
-        # Connect events
         create_btn.click(
-            create_session,
-            inputs=[
-                session_id_input,
-                policy_path_input,
-                camera_names_input,
-                arena_server_url_input,
-            ],
-            outputs=[setup_result, current_session_input],
+            fn=server_manager.create_and_start_session,
+            inputs=[session_name, model_path, camera_names],
+            outputs=[session_id_input, output_display],
         )
 
         start_btn.click(
-            start_session,
-            inputs=[current_session_input],
-            outputs=[session_status_display],
+            fn=server_manager.start_session,
+            inputs=[session_id_input],
+            outputs=[output_display],
         )
+
         stop_btn.click(
-            stop_session,
-            inputs=[current_session_input],
-            outputs=[session_status_display],
+            fn=server_manager.stop_session,
+            inputs=[session_id_input],
+            outputs=[output_display],
         )
+
         status_btn.click(
-            get_status, inputs=[current_session_input], outputs=[session_status_display]
+            fn=server_manager.get_session_status,
+            inputs=[session_id_input],
+            outputs=[output_display],
         )
-
-        gr.Markdown("""
-        ### 💡 Tips:
-        - 🟢 **RUNNING**: Session actively doing inference
-        - 🟡 **READY**: Session created but not started
-        - 🔴 **STOPPED**: Session paused
-
-        ### 🚀 API Access:
-        - **FastAPI Docs**: Visit `/api/docs` for interactive API documentation
-        - **Direct API**: Use `/api/sessions` endpoints for programmatic access
-        - **Health Check**: `/api/health` shows server status
-        - **OpenAPI Schema**: Available at `/api/openapi.json`
-        """)
 
     return demo
+
+
+class SimpleServerManager:
+    """Direct session management without HTTP API calls."""
+
+    def create_and_start_session(self, name: str, model_path: str, camera_names: str):
+        """Create and start a new session directly."""
+        try:
+            # Parse camera names
+            cameras = [c.strip() for c in camera_names.split(",") if c.strip()]
+
+            # Create session directly using session_manager
+            session_data = {
+                "name": name,
+                "model_path": model_path,
+                "arena_server_url": DEFAULT_ARENA_SERVER_URL,
+                "workspace_id": "default_workspace",
+                "room_id": f"room_{name}",
+                "camera_names": cameras,
+            }
+
+            session_id = session_manager.create_session(session_data)
+            session_manager.start_session(session_id)
+
+            success_msg = f"""
+### ✅ Success!
+**Session ID:** `{session_id}`
+**Status:** Running
+**Model:** {model_path}
+**Cameras:** {", ".join(cameras)}
+
+🎉 AI control is now active!
+"""
+            return session_id, success_msg
+
+        except Exception as e:
+            error_msg = f"""
+### ❌ Error
+Failed to create session: {e!s}
+
+Please check your model path and try again.
+"""
+            return "", error_msg
+
+    def start_session(self, session_id: str):
+        """Start an existing session."""
+        if not session_id:
+            return "⚠️ Please provide a session ID"
+
+        try:
+            session_manager.start_session(session_id)
+            return f"✅ Session `{session_id}` started successfully!"
+        except Exception as e:
+            return f"❌ Failed to start session: {e!s}"
+
+    def stop_session(self, session_id: str):
+        """Stop an existing session."""
+        if not session_id:
+            return "⚠️ Please provide a session ID"
+
+        try:
+            session_manager.stop_session(session_id)
+            return f"⏹️ Session `{session_id}` stopped successfully!"
+        except Exception as e:
+            return f"❌ Failed to stop session: {e!s}"
+
+    def get_session_status(self, session_id: str):
+        """Get detailed session status."""
+        if not session_id:
+            return "⚠️ Please provide a session ID"
+
+        try:
+            status = session_manager.get_session_status(session_id)
+            if not status:
+                return f"❌ Session `{session_id}` not found"
+
+            status_msg = f"""
+### 📊 Session Status: `{session_id}`
+
+**State:** {status.get("state", "Unknown")}
+**Model:** {status.get("model_path", "N/A")}
+**Inferences:** {status.get("total_inferences", 0)}
+**Commands Sent:** {status.get("commands_sent", 0)}
+**Errors:** {status.get("errors", 0)}
+
+**Performance:**
+- Queue Length: {status.get("queue_length", 0)}
+- Last Update: {status.get("last_update", "Never")}
+"""
+            return status_msg
+
+        except Exception as e:
+            return f"❌ Failed to get status: {e!s}"
 
 
 def launch_simple_integrated_app(
@@ -337,11 +237,15 @@ def launch_simple_integrated_app(
     print(f"🔄 Health Check: http://{host}:{port}/api/health")
     print("🔧 Direct session management + API access!")
 
-    # Create Gradio demo
+    # Create Gradio demo first
     demo = create_simple_gradio_interface()
 
-    # Create custom FastAPI app from the Gradio demo's built-in app
-    app = demo.app
+    # Create main FastAPI app
+    app = FastAPI(
+        title="🤖 Robot AI Control Center",
+        description="Integrated ACT Model Inference Server with Web Interface",
+        version="1.0.0",
+    )
 
     # Add CORS middleware
     app.add_middleware(
@@ -352,18 +256,23 @@ def launch_simple_integrated_app(
         allow_headers=["*"],
     )
 
-    # Mount the FastAPI AI server under /api
+    # Mount the FastAPI AI server under /api FIRST
     app.mount("/api", fastapi_app)
 
-    # Launch using Gradio's queue and launch methods
-    demo.queue()
-    demo.launch(
-        server_name=host,
-        server_port=port,
-        share=share,
-        show_error=True,
-        show_api=False,  # Hide Gradio's default API docs since we have our own
-        prevent_thread_lock=False,
+    # Mount Gradio at a subpath to avoid the root redirect issue
+    app = gr.mount_gradio_app(app, demo, path="/gradio")
+
+    # Add custom root endpoint that redirects to /gradio/ (with trailing slash)
+    @app.get("/")
+    async def root():
+        return RedirectResponse(url="/gradio/", status_code=302)
+
+    # Launch with uvicorn
+    uvicorn.run(
+        app,
+        host=host,
+        port=port,
+        log_level="info",
     )
 
 

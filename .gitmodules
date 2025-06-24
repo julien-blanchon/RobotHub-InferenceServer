@@ -4,3 +4,4 @@
 [submodule "external/RobotHub-TransportServer"]
 	path = external/RobotHub-TransportServer
 	url = https://github.com/julien-blanchon/RobotHub-TransportServer
+	branch = main

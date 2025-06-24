@@ -1,0 +1,6 @@
+[submodule "external/lerobot"]
+	path = external/lerobot
+	url = https://github.com/huggingface/lerobot
+[submodule "external/RobotHub-TransportServer"]
+	path = external/RobotHub-TransportServer
+	url = https://github.com/julien-blanchon/RobotHub-TransportServer

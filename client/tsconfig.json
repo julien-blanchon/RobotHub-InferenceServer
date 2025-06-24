@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    // Environment setup & latest features
+    "lib": ["ES2022", "DOM"],
+    "target": "ES2022",
+    "module": "es2022",
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "allowJs": true,
+
+    // Bundler mode
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "noEmit": false,
+    "outDir": "./dist",
+    
+    // Declaration files
+    "declaration": true,
+    "emitDeclarationOnly": false,
+    "declarationMap": true,
+
+    // Best practices
+    "strict": true,
+    "skipLibCheck": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+
+    // Some stricter flags (disabled by default)
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noPropertyAccessFromIndexSignature": false
+  }
+}

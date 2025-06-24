@@ -1,0 +1,63 @@
+{
+  "name": "@robohub/inference-server-client",
+  "version": "1.0.0",
+  "description": "TypeScript client for LeRobot Arena Inference Server - ACT model inference and session management",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun --format esm --sourcemap && bunx tsc --emitDeclarationOnly --declaration --outDir ./dist/temp && cp -r ./dist/temp/src/* ./dist/ && rm -rf ./dist/temp",
+    "dev": "bun --watch src/index.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit",
+    "clean": "rm -rf dist src/generated",
+    "export-openapi": "cd .. && uv run python -m inference_server.export_openapi --output client/openapi.json",
+    "generate-client": "bunx @hey-api/openapi-ts -i openapi.json -o src/generated -c @hey-api/client-fetch",
+    "generate": "bun run export-openapi && bun run generate-client",
+    "prebuild": "bun run clean && bun run generate"
+  },
+  "keywords": [
+    "lerobot",
+    "arena",
+    "inference-server",
+    "act",
+    "robotics",
+    "inference",
+    "typescript",
+    "client"
+  ],
+  "author": "Julien Blanchon",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@hey-api/client-fetch": "^0.2.4"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.53.12",
+    "@types/bun": "latest",
+    "typescript": "^5.8.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/julien-blanchon/RoboHub.git#main:services/inference-server/client",
+    "directory": "services/inference-server/client"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

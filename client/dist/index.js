@@ -10,6 +10,10 @@ var CreateSessionRequestSchema = {
       type: "string",
       title: "Policy Path"
     },
+    transport_server_url: {
+      type: "string",
+      title: "Transport Server Url"
+    },
     camera_names: {
       items: {
         type: "string"
@@ -17,11 +21,6 @@ var CreateSessionRequestSchema = {
       type: "array",
       title: "Camera Names",
       default: ["front"]
-    },
-    transport_server_url: {
-      type: "string",
-      title: "Transport Server Url",
-      default: "http://localhost:8000"
     },
     workspace_id: {
       anyOf: [
@@ -52,7 +51,7 @@ var CreateSessionRequestSchema = {
     }
   },
   type: "object",
-  required: ["session_id", "policy_path"],
+  required: ["session_id", "policy_path", "transport_server_url"],
   title: "CreateSessionRequest"
 };
 var CreateSessionResponseSchema = {
@@ -190,7 +189,7 @@ var ValidationErrorSchema = {
   required: ["loc", "msg", "type"],
   title: "ValidationError"
 };
-// ../../../node_modules/@hey-api/client-fetch/dist/node/index.mjs
+// node_modules/@hey-api/client-fetch/dist/node/index.mjs
 var e = /\{[^{}]+\}/g;
 var t = ({ allowReserved: e2, name: t2, value: r }) => {
   if (r == null)
@@ -440,5 +439,5 @@ export {
   CreateSessionRequestSchema
 };
 
-//# debugId=578200F5AF3D5E0564756E2164756E21
+//# debugId=9EA46170B85C82C664756E2164756E21
 //# sourceMappingURL=index.js.map

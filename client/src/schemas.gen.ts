@@ -10,6 +10,10 @@ export const CreateSessionRequestSchema = {
             type: 'string',
             title: 'Policy Path'
         },
+        transport_server_url: {
+            type: 'string',
+            title: 'Transport Server Url'
+        },
         camera_names: {
             items: {
                 type: 'string'
@@ -17,11 +21,6 @@ export const CreateSessionRequestSchema = {
             type: 'array',
             title: 'Camera Names',
             default: ['front']
-        },
-        transport_server_url: {
-            type: 'string',
-            title: 'Transport Server Url',
-            default: 'http://localhost:8000'
         },
         workspace_id: {
             anyOf: [
@@ -52,7 +51,7 @@ export const CreateSessionRequestSchema = {
         }
     },
     type: 'object',
-    required: ['session_id', 'policy_path'],
+    required: ['session_id', 'policy_path', 'transport_server_url'],
     title: 'CreateSessionRequest'
 } as const;
 

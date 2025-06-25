@@ -3,8 +3,8 @@
 export type CreateSessionRequest = {
     session_id: string;
     policy_path: string;
+    transport_server_url: string;
     camera_names?: Array<(string)>;
-    transport_server_url?: string;
     workspace_id?: (string | null);
     policy_type?: string;
     language_instruction?: (string | null);

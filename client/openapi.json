@@ -289,6 +289,10 @@
             "type": "string",
             "title": "Policy Path"
           },
+          "transport_server_url": {
+            "type": "string",
+            "title": "Transport Server Url"
+          },
           "camera_names": {
             "items": {
               "type": "string"
@@ -298,11 +302,6 @@
             "default": [
               "front"
             ]
-          },
-          "transport_server_url": {
-            "type": "string",
-            "title": "Transport Server Url",
-            "default": "http://localhost:8000"
           },
           "workspace_id": {
             "anyOf": [
@@ -335,7 +334,8 @@
         "type": "object",
         "required": [
           "session_id",
-          "policy_path"
+          "policy_path",
+          "transport_server_url"
         ],
         "title": "CreateSessionRequest"
       },

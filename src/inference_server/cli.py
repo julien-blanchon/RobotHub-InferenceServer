@@ -20,7 +20,7 @@ def setup_logging(debug: bool = False):
     )
 
 
-def launch_server_only(host: str = "localhost", port: int = 8001, reload: bool = True):
+def launch_server_only(host: str = "0.0.0.0", port: int = 8001, reload: bool = True):
     """Launch only the AI server."""
     print(f"🚀 Starting RobotHub Inference Server on {host}:{port}")
     uvicorn.run(
@@ -33,7 +33,7 @@ def launch_server_only(host: str = "localhost", port: int = 8001, reload: bool =
 
 
 def launch_integrated_app(
-    host: str = "localhost", port: int = 7860, share: bool = False, debug: bool = False
+    host: str = "0.0.0.0", port: int = 7860, share: bool = False, debug: bool = False
 ):
     """Launch the integrated app (UI + Server)."""
     print(f"🎨 Starting Integrated RobotHub App on {host}:{port}")
@@ -76,7 +76,7 @@ Examples:
 
     # Server configuration
     parser.add_argument(
-        "--server-host", default="localhost", help="AI server host (default: localhost)"
+        "--server-host", default="0.0.0.0", help="AI server host (default: localhost)"
     )
     parser.add_argument(
         "--server-port", type=int, default=8001, help="AI server port (default: 8001)"
@@ -87,7 +87,7 @@ Examples:
 
     # App configuration
     parser.add_argument(
-        "--host", default="localhost", help="App host (default: localhost)"
+        "--host", default="0.0.0.0", help="App host (default: localhost)"
     )
     parser.add_argument(
         "--port", type=int, default=7860, help="App port (default: 7860)"

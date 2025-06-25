@@ -37,7 +37,7 @@ def start_api_server_thread(port: int = 8001):
     def run_server():
         global server_started
         logger.info(f"Starting AI server on port {port}")
-        uvicorn.run(fastapi_app, host="localhost", port=port, log_level="warning")
+        uvicorn.run(fastapi_app, host="0.0.0.0", port=port, log_level="warning")
         server_started = False
 
     server_thread = threading.Thread(target=run_server, daemon=True)
@@ -407,7 +407,7 @@ class ServerManagement:
 
 
 def launch_simple_integrated_app(
-    host: str = "localhost",
+    host: str = "0.0.0.0",
     port: int = DEFAULT_PORT,
     share: bool = False,
     transport_server_url: str = DEFAULT_TRANSPORT_SERVER_URL,

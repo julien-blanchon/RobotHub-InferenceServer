@@ -15,7 +15,7 @@ dependencies = [
     "huggingface-hub>=0.32.4",
     "imageio[ffmpeg]>=2.37.0",
     "lerobot[pi0,smolvla]",
-    "robothub-transport-server-client",
+    "robothub_transport_server_client",
     "opencv-python>=4.11.0.86",
     "opencv-python-headless>=4.11.0.86",
     "psutil>=7.0.0",

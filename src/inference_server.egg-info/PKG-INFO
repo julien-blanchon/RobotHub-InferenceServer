@@ -13,9 +13,8 @@ Requires-Dist: gradio>=5.34.2
 Requires-Dist: httpx>=0.28.1
 Requires-Dist: huggingface-hub>=0.32.4
 Requires-Dist: imageio[ffmpeg]>=2.37.0
-Requires-Dist: lerobot
+Requires-Dist: lerobot[pi0,smolvla]
 Requires-Dist: robothub-transport-server-client
-Requires-Dist: numpy>=1.26.4
 Requires-Dist: opencv-python>=4.11.0.86
 Requires-Dist: opencv-python-headless>=4.11.0.86
 Requires-Dist: psutil>=7.0.0
@@ -27,9 +26,10 @@ Requires-Dist: tqdm>=4.67.1
 Requires-Dist: transformers>=4.52.4
 Requires-Dist: uvicorn[standard]>=0.34.3
 Requires-Dist: websockets>=15.0.1
+Requires-Dist: numpy>=2
 
 ---
-title: LeRobot Arena - AI Inference Server
+title: RobotHub Inference Server
 emoji: 🤖
 colorFrom: blue
 colorTo: purple
@@ -53,295 +53,311 @@ pinned: false
 fullWidth: true
 ---
 
-# Inference Server
+# 🤖 RobotHub Inference Server
 
-🤖 **Real-time ACT Model Inference Server for Robot Control**
+**AI-Powered Robot Control Engine for Real-time Robotics**
 
-This server provides ACT (Action Chunking Transformer) model inference for robotics applications using the transport server communication system. It includes a user-friendly Gradio web interface for easy setup and management.
+The RobotHub Inference Server is the **AI brain** of the RobotHub ecosystem. It's a FastAPI server that processes real-time camera feeds and robot state data to generate precise control commands using transformer models like ACT, Pi0, SmolVLA, and Diffusion Policies.
 
-## ✨ Features
+## 🏗️ How It Works in the RobotHub Ecosystem
 
-- **Real-time AI Inference**: Run ACT models for robot control at 20Hz control frequency
-- **Multi-Camera Support**: Handle multiple camera streams with different names
-- **Web Interface**: User-friendly Gradio UI for setup and monitoring
-- **Session Management**: Create, start, stop, and monitor inference sessions
-- **Automatic Timeout**: Sessions automatically cleanup after 10 minutes of inactivity
-- **Debug Tools**: Built-in debugging and monitoring endpoints
-- **Flexible Configuration**: Support for custom model paths, camera configurations
-- **No External Dependencies**: Direct Python execution without subprocess calls
+The RobotHub Inference Server is part of a complete robotics control pipeline:
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  RobotHub       │    │  RobotHub       │    │  RobotHub       │    │  Physical       │
+│  Frontend       │───▶│  TransportServer│───▶│  InferenceServer│───▶│  Robot          │
+│                 │    │                 │    │                 │    │                 │
+│ • Web Interface │    │ • Video Streams │    │ • AI Models     │    │ • USB/Network   │
+│ • Robot Config  │    │ • Joint States  │    │ • Real-time     │    │ • Joint Control │
+│ • Monitoring    │    │ • WebRTC/WS     │    │ • Inference     │    │ • Cameras       │
+└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
+        │                        ▲                        │                        │
+        │                        │                        │                        │
+        └────────────────────────┼────────────────────────┼────────────────────────┘
+                                 │                        │
+                            Status & Control         Action Commands
+```
+
+### 🔄 Data Flow
+
+1. **Input Sources** → TransportServer:
+   - **Camera Feeds**: Real-time video from robot cameras (front, wrist, overhead, etc.)
+   - **Joint States**: Current robot joint positions and velocities
+   - **Robot Configuration**: Joint limits, kinematics, calibration data
+
+2. **TransportServer** → **Inference Server**:
+   - Streams normalized camera images (RGB, 224x224 or custom resolution)
+   - Sends normalized joint positions (most joints -100 to +100, gripper 0 to +100)
+   - Maintains real-time communication via WebSocket/WebRTC
+
+3. **Inference Server** → **AI Processing**:
+   - **Vision Processing**: Multi-camera image preprocessing and encoding
+   - **State Encoding**: Joint position normalization and history buffering
+   - **Policy Inference**: Transformer model processes visual + proprioceptive data
+   - **Action Generation**: Outputs sequence of robot joint commands
+
+4. **Output** → **Robot Execution**:
+   - **Action Chunks**: Sequences of joint commands (ACT outputs 10-100 actions per inference)
+   - **Real-time Control**: 20Hz control loop, 2Hz inference loop
+   - **Safety Monitoring**: Emergency stop, joint limit checking
 
 ## 🚀 Quick Start
 
-### Prerequisites
+The server is primarily a **FastAPI REST API**, but includes an optional **Gradio web interface** for easy debugging and testing without needing to write code or use curl commands.
 
-- Python 3.12+
-- UV package manager (recommended)
-- Trained ACT model
-- Transport server running
-
-### 1. Installation
+### Option 1: Server + UI (Recommended for Testing)
 
 ```bash
-cd backend/ai-server
-
-# Install dependencies using uv (recommended)
+# Clone and setup
+git clone https://github.com/julien-blanchon/RobotHub-InferenceServer
+cd RobotHub-InferenceServer
 uv sync
 
-# Or using pip
-pip install -e .
-```
-
-### 2. Launch the Application
-
-#### **🚀 Simple Integrated Mode (Recommended)**
-```bash
-# Everything runs in one process - no subprocess issues!
+# Launch with integrated UI (FastAPI + Gradio on same port)
 python launch_simple.py
-
-# Or using the CLI
-python -m inference_server.cli --simple
 ```
 
-This will:
-- Run everything on `http://localhost:7860`
-- Direct session management (no HTTP API calls)
-- No external subprocess dependencies
-- Most robust and simple deployment!
+**Access Points:**
+- 🎨 **Web Interface**: http://localhost:7860/ (create sessions, monitor performance)
+- 📖 **API Documentation**: http://localhost:7860/api/docs (REST API reference)
+- 🔍 **Health Check**: http://localhost:7860/api/health (system status)
 
-#### **🔧 Development Mode (Separate Processes)**
-```bash
-# Traditional approach with separate server and UI
-python -m inference_server.cli
-```
-
-This will:
-- Start the AI server on `http://localhost:8001`
-- Launch the Gradio UI on `http://localhost:7860`
-- Better for development and debugging
-
-### 3. Using the Web Interface
-
-1. **Check Server Status**: The interface will automatically check if the AI server is running
-2. **Configure Your Robot**: Enter your model path and camera setup
-3. **Create & Start Session**: Click the button to set up AI control
-4. **Monitor Performance**: Use the status panel to monitor inference
-
-## 🎯 Workflow Guide
-
-### Step 1: AI Server
-- The server status will be displayed at the top
-- Click "Start Server" if it's not already running
-- Use "Check Status" to verify connectivity
-
-### Step 2: Set Up Robot AI
-- **Session Name**: Give your session a unique name (e.g., "my-robot-01")
-- **AI Model Path**: Path to your trained ACT model (e.g., "./checkpoints/act_so101_beyond")
-- **Camera Names**: Comma-separated list of camera names (e.g., "front,wrist,overhead")
-- Click "Create & Start AI Control" to begin
-
-### Step 3: Control Session
-- The session ID will be auto-filled after creation
-- Use Start/Stop buttons to control inference
-- Click "Status" to see detailed performance metrics
-
-## 🛠️ Advanced Usage
-
-### CLI Options
+### Option 2: Server Only (Production)
 
 ```bash
-# Simple integrated mode (recommended)
-python -m inference_server.cli --simple
-
-# Development mode (separate processes)
-python -m inference_server.cli
-
-# Launch only the server
+# Launch FastAPI server only (no UI)
 python -m inference_server.cli --server-only
 
-# Launch only the UI (server must be running separately)  
-python -m inference_server.cli --ui-only
-
-# Custom ports
-python -m inference_server.cli --server-port 8002 --ui-port 7861
-
-# Enable public sharing
-python -m inference_server.cli --share
-
-# For deployment (recommended)
-python -m inference_server.cli --simple --host 0.0.0.0 --share
+# Or with custom configuration
+python -m inference_server.cli --server-only --host localhost --port 8080
 ```
 
-### API Endpoints
+**Access:**
+- 📖 **API Only**: http://localhost:7860/api/docs
+- 🔍 **Health Check**: http://localhost:7860/api/health
 
-The server provides a REST API for programmatic access:
+### Option 3: Docker
 
-- `GET /health` - Server health check
-- `POST /sessions` - Create new session
-- `GET /sessions` - List all sessions
-- `GET /sessions/{id}` - Get session details
-- `POST /sessions/{id}/start` - Start inference
-- `POST /sessions/{id}/stop` - Stop inference
-- `POST /sessions/{id}/restart` - Restart inference
-- `DELETE /sessions/{id}` - Delete session
-
-#### Debug Endpoints
-- `GET /debug/system` - System information (CPU, memory, GPU)
-- `GET /debug/sessions/{id}/queue` - Action queue details
-- `POST /debug/sessions/{id}/reset` - Reset session state
-
-### Configuration
-
-#### Joint Value Convention
-- All joint inputs/outputs use **NORMALIZED VALUES**
-- Most joints: -100 to +100 (RANGE_M100_100)
-- Gripper: 0 to 100 (RANGE_0_100)
-- This matches the training data format exactly
-
-#### Camera Support
-- Supports arbitrary number of camera streams
-- Each camera has a unique name (e.g., "front", "wrist", "overhead")
-- All camera streams are synchronized for inference
-- Images expected in RGB format, uint8 [0-255]
-
-## 📊 Monitoring
-
-### Session Status Indicators
-- 🟢 **Running**: Inference active and processing
-- 🟡 **Ready**: Session created but inference not started
-- 🔴 **Stopped**: Inference stopped
-- 🟠 **Initializing**: Session being set up
-
-### Smart Session Control
-The UI now provides intelligent feedback:
-- ℹ️ **Already Running**: When trying to start a running session
-- ℹ️ **Already Stopped**: When trying to stop a stopped session
-- 💡 **Smart Suggestions**: Context-aware tips based on current status
-
-### Performance Metrics
-- **Inferences**: Total number of model inferences performed
-- **Commands Sent**: Joint commands sent to robot
-- **Queue Length**: Actions waiting in the queue
-- **Errors**: Number of errors encountered
-- **Data Flow**: Images and joint states received
-
-## 🐳 Docker Usage
-
-### Build the Image
 ```bash
-cd services/inference-server
-docker build -t inference-server .
-```
-
-### Run the Container
-```bash
-# Basic usage
-docker run -p 7860:7860 inference-server
-
-# With environment variables
+# Build and run
+docker build -t robothub-inference-server .
 docker run -p 7860:7860 \
-  -e DEFAULT_ARENA_SERVER_URL=http://your-server.com \
-  -e DEFAULT_MODEL_PATH=./checkpoints/your-model \
-  inference-server
-
-# With GPU support
-docker run --gpus all -p 7860:7860 inference-server
+  -v /path/to/your/models:/app/checkpoints \
+  robothub-inference-server
 ```
 
-## 🔧 Troubleshooting
+## 🛠️ Setting Up Your Robot
 
+### 1. **Connect Your Hardware**
 
-
-### Common Issues
-
-1. **Server Won't Start**
-   - Check if port 8001 is available
-   - Verify model path exists and is accessible
-   - Check dependencies are installed correctly
-
-2. **Session Creation Fails**
-   - Verify model path is correct
-   - Check Arena server is running on specified URL
-   - Ensure camera names match your robot configuration
-
-3. **Poor Performance**
-   - Monitor system resources in the debug panel
-   - Check if GPU is being used for inference
-   - Verify control/inference frequency settings
-
-4. **Connection Issues**
-   - Verify Arena server URL is correct
-   - Check network connectivity
-   - Ensure workspace/room IDs are valid
-
-### Debug Mode
-
-Enable debug mode for detailed logging:
+You need the RobotHub TransportServer running first:
 
 ```bash
-uv run python -m lerobot_arena_ai_server.cli --debug
+# Start the RobotHub TransportServer (dependency)
+cd ../RobotHub-TransportServer
+docker run -p 8000:8000 robothub-transport-server
 ```
 
-### System Requirements
+### 2. **Create an Inference Session**
 
-- **CPU**: Multi-core recommended for 30Hz control
-- **Memory**: 8GB+ RAM recommended
-- **GPU**: CUDA-compatible GPU for fast inference (optional but recommended)
-- **Network**: Stable connection to Arena server
+**Via Web Interface (Gradio UI):**
+1. Open http://localhost:7860/
+2. Enter your **model path** (e.g., `./checkpoints/act_pick_place_model`)
+3. Configure **camera names** (e.g., `front,wrist,overhead`)
+4. Set **TransportServer URL** (default: `http://localhost:8000`)
+5. Click **"Create & Start AI Control"**
 
-## 📚 Architecture
+**Via REST API:**
+```python
+import httpx
 
-### Integrated Mode (Recommended)
-```
-┌─────────────────────────────────────┐    ┌─────────────────┐
-│        Single Application           │    │  LeRobot Arena  │
-│  ┌─────────────┐  ┌─────────────┐   │◄──►│   (Port 8000)   │
-│  │ Gradio UI   │  │ AI Server   │   │    └─────────────────┘
-│  │    (/)      │  │  (/api/*)   │   │             │
-│  └─────────────┘  └─────────────┘   │             │
-│       (Port 7860)                   │        Robot/Cameras
-└─────────────────────────────────────┘
-           │
-      Web Browser
-```
+session_config = {
+    "session_id": "robot_assembly_task",
+    "policy_path": "./checkpoints/act_assembly_model",
+    "policy_type": "act",  # or "pi0", "smolvla", "diffusion"
+    "camera_names": ["front_cam", "wrist_cam"],
+    "transport_server_url": "http://localhost:8000",
+    "language_instruction": "Pick up the red block and place it on the blue platform"  # For SmolVLA
+}
 
-### Development Mode
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Gradio UI     │    │   AI Server     │    │  LeRobot Arena  │
-│   (Port 7860)   │◄──►│   (Port 8001)   │◄──►│   (Port 8000)   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         │                       │                       │
-    Web Browser              ACT Model              Robot/Cameras
-                             Inference
+async with httpx.AsyncClient() as client:
+    # Create session
+    response = await client.post("http://localhost:7860/api/sessions", json=session_config)
+    
+    # Start inference
+    await client.post(f"http://localhost:7860/api/sessions/{session_config['session_id']}/start")
 ```
 
-### Data Flow
+### 3. **Connect Robot & Cameras**
 
-1. **Camera Data**: Robot cameras → Arena → AI Server
-2. **Joint State**: Robot joints → Arena → AI Server  
-3. **AI Inference**: Images + Joint State → ACT Model → Actions
-4. **Control Commands**: Actions → Arena → Robot
+The robot and cameras connect to the **TransportServer**, not directly to the Inference Server:
 
-### Session Lifecycle
+```python
+# Example: Connect robot to TransportServer
+from transport_server_client import RoboticsConsumer, RoboticsProducer
+from transport_server_client.video import VideoProducer
 
-1. **Create**: Set up rooms in Arena, load ACT model
-2. **Start**: Begin inference loop (3Hz) and control loop (30Hz)
-3. **Running**: Process camera/joint data, generate actions
-4. **Stop**: Pause inference, maintain connections
-5. **Delete**: Clean up resources, disconnect from Arena
+# Robot receives AI commands and executes them
+joint_consumer = RoboticsConsumer('http://localhost:8000')
+await joint_consumer.connect(workspace_id, joint_input_room_id)
 
-## 🤝 Contributing
+def execute_joint_commands(commands):
+    """Execute commands on your actual robot hardware"""
+    for cmd in commands:
+        joint_name = cmd['name']
+        position = cmd['value']  # Normalized: most joints -100 to +100, gripper 0 to +100
+        robot.move_joint(joint_name, position)
 
-1. Follow the existing code style
-2. Add tests for new features
-3. Update documentation
-4. Submit pull requests
+joint_consumer.on_joint_update(execute_joint_commands)
 
-## 📄 License
+# Robot sends its current state back
+joint_producer = RoboticsProducer('http://localhost:8000')
+await joint_producer.connect(workspace_id, joint_output_room_id)
 
-This project follows the same license as the parent LeRobot Arena project.
+# Send current robot state periodically
+await joint_producer.send_state_sync({
+    'shoulder_pan_joint': current_joint_positions[0],
+    'shoulder_lift_joint': current_joint_positions[1],
+    # ... etc
+})
 
----
+# Cameras stream to TransportServer
+for camera_name, camera_device in cameras.items():
+    video_producer = VideoProducer('http://localhost:8000')
+    await video_producer.connect(workspace_id, camera_room_ids[camera_name])
+    await video_producer.start_camera(camera_device)
+```
 
-For more information, see the [LeRobot Arena documentation](../../README.md).
+## 🎮 Supported AI Models
+
+### **ACT (Action Chunking Transformer)**
+- **Best for**: Complex manipulation tasks requiring temporal coherence
+- **Output**: Chunks of 10-100 future actions per inference
+- **Use case**: Pick-and-place, assembly, cooking tasks
+
+### **Pi0 (Vision-Language Policy)**
+- **Best for**: Tasks requiring language understanding
+- **Output**: Single actions with language conditioning
+- **Use case**: "Pick up the red mug", "Open the top drawer"
+
+### **SmolVLA (Small Vision-Language-Action)**
+- **Best for**: Lightweight vision-language tasks
+- **Use case**: Simple manipulation with natural language
+
+### **Diffusion Policy**
+- **Best for**: High-precision continuous control
+- **Use case**: Precise assembly, drawing, writing
+
+## 📊 Monitoring & Debugging
+
+### Using the Web Interface
+
+The Gradio UI provides real-time monitoring:
+- **Active Sessions**: View all running inference sessions
+- **Performance Metrics**: Inference rate, control rate, camera FPS
+- **Action Queue**: Current action buffer status
+- **Error Logs**: Real-time error tracking
+
+### Using the REST API
+
+```bash
+# Check active sessions
+curl http://localhost:7860/api/sessions
+
+# Get detailed session info
+curl http://localhost:7860/api/sessions/my_robot_session
+
+# Stop a session
+curl -X POST http://localhost:7860/api/sessions/my_robot_session/stop
+
+# Emergency stop all sessions
+curl -X POST http://localhost:7860/api/debug/emergency_stop
+```
+
+## 🔧 Configuration
+
+### Multi-Camera Setup
+
+```python
+# Configure multiple camera angles
+session_config = {
+    "camera_names": ["front_cam", "wrist_cam", "overhead_cam", "side_cam"],
+    # Each camera gets its own TransportServer room
+}
+```
+
+### Custom Joint Mappings
+
+The server handles various robot joint naming conventions automatically:
+- **LeRobot names**: `shoulder_pan_joint`, `shoulder_lift_joint`, `elbow_joint`, etc.
+- **Custom names**: `base_rotation`, `shoulder_tilt`, `elbow_bend`, etc.
+- **Alternative names**: `joint_1`, `joint_2`, `base_joint`, etc.
+
+See `src/inference_server/models/joint_config.py` for full mapping details.
+
+## 🔌 Integration Examples
+
+### **Standalone Python Application**
+
+```python
+import asyncio
+from transport_server_client import RoboticsProducer, RoboticsConsumer  
+from transport_server_client.video import VideoProducer
+import httpx
+
+class RobotAIController:
+    def __init__(self):
+        self.inference_client = httpx.AsyncClient(base_url="http://localhost:7860/api")
+        self.transport_url = "http://localhost:8000"
+        
+    async def start_ai_control(self, task_description: str):
+        # 1. Create inference session
+        session_config = {
+            "session_id": f"task_{int(time.time())}",
+            "policy_path": "./checkpoints/general_manipulation_act",
+            "policy_type": "act",
+            "camera_names": ["front", "wrist"],
+            "language_instruction": task_description
+        }
+        
+        response = await self.inference_client.post("/sessions", json=session_config)
+        session_data = response.json()
+        
+        # 2. Connect robot to the same workspace/rooms
+        await self.connect_robot_hardware(session_data)
+        
+        # 3. Start AI inference
+        await self.inference_client.post(f"/sessions/{session_config['session_id']}/start")
+        
+        print(f"🤖 AI control started for task: {task_description}")
+
+# Usage
+controller = RobotAIController()
+await controller.start_ai_control("Pick up the blue cup and place it on the shelf")
+```
+
+## 🚨 Safety & Best Practices
+
+- **Emergency Stop**: Built-in emergency stop via API: `/sessions/{id}/stop`
+- **Joint Limits**: All joint values are normalized (most joints -100 to +100, gripper 0 to +100)
+- **Hardware Limits**: Robot driver should enforce actual hardware joint limits
+- **Session Timeouts**: Automatic cleanup prevents runaway processes
+- **Error Handling**: Graceful degradation when cameras disconnect
+
+## 🚀 Deployment
+
+### **Local Development**
+```bash
+# All services on one machine
+python launch_simple.py  # Inference Server with UI
+```
+
+### **Production Setup**
+```bash
+# Server only (no UI)
+python -m inference_server.cli --server-only --host localhost --port 7860
+
+# Or with Docker
+docker run -p 7860:7860 robothub-inference-server
+```

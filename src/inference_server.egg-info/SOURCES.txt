@@ -6,7 +6,6 @@ src/inference_server/export_openapi.py
 src/inference_server/main.py
 src/inference_server/session_manager.py
 src/inference_server/simple_integrated.py
-src/inference_server/ui.py
 src/inference_server.egg-info/PKG-INFO
 src/inference_server.egg-info/SOURCES.txt
 src/inference_server.egg-info/dependency_links.txt

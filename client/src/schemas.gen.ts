@@ -18,9 +18,9 @@ export const CreateSessionRequestSchema = {
             title: 'Camera Names',
             default: ['front']
         },
-        arena_server_url: {
+        transport_server_url: {
             type: 'string',
-            title: 'Arena Server Url',
+            title: 'Transport Server Url',
             default: 'http://localhost:8000'
         },
         workspace_id: {

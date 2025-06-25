@@ -1,12 +1,18 @@
 # Use official UV base image with Python 3.12
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
+# Parameterize port with default value
+ARG PORT=8001
+ARG TRANSPORT_SERVER_URL=http://localhost:8000
+
 # Set environment variables for Python and UV
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     UV_SYSTEM_PYTHON=1 \
     UV_COMPILE_BYTECODE=1 \
-    UV_CACHE_DIR=/tmp/uv-cache
+    UV_CACHE_DIR=/tmp/uv-cache \
+    PORT=${PORT} \
+    TRANSPORT_SERVER_URL=${TRANSPORT_SERVER_URL}
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -58,12 +64,12 @@ USER appuser
 # Add virtual environment to PATH
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Expose port 7860 (HuggingFace Spaces default)
-EXPOSE 7860
+# Expose port (parameterized)
+EXPOSE ${PORT}
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:7860/api/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/api/health')" || exit 1
 
 # Run the application
-CMD ["python", "launch_simple.py", "--host", "0.0.0.0", "--port", "7860"] 
+CMD ["sh", "-c", "python launch_simple.py --host localhost --port ${PORT} --transport-server-url ${TRANSPORT_SERVER_URL}"] 

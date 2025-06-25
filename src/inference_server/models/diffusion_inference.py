@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from lerobot.common.policies.diffusion.modeling_diffusion import DiffusionPolicy
 from lerobot.common.utils.utils import init_logging
+from torchvision import transforms
 
 from .base_inference import BaseInferenceEngine
 
@@ -22,10 +23,9 @@ class DiffusionInferenceEngine(BaseInferenceEngine):
         self,
         policy_path: str,
         camera_names: list[str],
-        use_custom_joint_names: bool = True,
         device: str | None = None,
     ):
-        super().__init__(policy_path, camera_names, use_custom_joint_names, device)
+        super().__init__(policy_path, camera_names, device)
 
         # Diffusion-specific configuration
         self.num_inference_steps = 10  # Number of diffusion steps
@@ -37,53 +37,41 @@ class DiffusionInferenceEngine(BaseInferenceEngine):
         """Load the Diffusion policy from the specified path."""
         logger.info(f"Loading Diffusion policy from: {self.policy_path}")
 
-        try:
-            # Initialize hydra config for LeRobot
-            init_logging()
+        # Initialize hydra config for LeRobot
+        init_logging()
 
-            # Load the Diffusion policy
-            self.policy = DiffusionPolicy.from_pretrained(self.policy_path)
-            self.policy.to(self.device)
-            self.policy.eval()
+        # Load the Diffusion policy
+        self.policy = DiffusionPolicy.from_pretrained(self.policy_path)
+        self.policy.to(self.device)
+        self.policy.eval()
 
-            # Set up image transforms based on policy config
-            if hasattr(self.policy, "config"):
-                self._setup_image_transforms()
+        # Set up image transforms based on policy config
+        if hasattr(self.policy, "config"):
+            self._setup_image_transforms()
 
-            self.is_loaded = True
-            logger.info(f"✅ Diffusion policy loaded successfully on {self.device}")
-
-        except Exception as e:
-            logger.exception(f"Failed to load Diffusion policy from {self.policy_path}")
-            msg = f"Failed to load Diffusion policy: {e}"
-            raise RuntimeError(msg) from e
+        self.is_loaded = True
+        logger.info(f"Diffusion policy loaded successfully on {self.device}")
 
     def _setup_image_transforms(self):
         """Set up image transforms based on the policy configuration."""
-        try:
-            # Get image size from policy config
-            config = self.policy.config
-            image_size = getattr(config, "image_size", 224)
+        # Get image size from policy config
+        config = self.policy.config
+        image_size = getattr(config, "image_size", 224)
 
-            # Create transforms for each camera
-            for camera_name in self.camera_names:
-                # Use policy-specific transforms if available
-                if hasattr(self.policy, "image_processor"):
-                    self.image_transforms[camera_name] = self.policy.image_processor
-                else:
-                    # Fall back to default transform
-                    from torchvision import transforms
-
-                    self.image_transforms[camera_name] = transforms.Compose([
-                        transforms.Resize((image_size, image_size)),
-                        transforms.ToTensor(),
-                        transforms.Normalize(
-                            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                        ),
-                    ])
-
-        except Exception as e:
-            logger.warning(f"Could not set up image transforms: {e}. Using defaults.")
+        # Create transforms for each camera
+        for camera_name in self.camera_names:
+            # Use policy-specific transforms if available
+            if hasattr(self.policy, "image_processor"):
+                self.image_transforms[camera_name] = self.policy.image_processor
+            else:
+                # Fall back to default transform
+                self.image_transforms[camera_name] = transforms.Compose([
+                    transforms.Resize((image_size, image_size)),
+                    transforms.ToTensor(),
+                    transforms.Normalize(
+                        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                    ),
+                ])
 
     async def predict(
         self, images: dict[str, np.ndarray], joint_positions: np.ndarray, **kwargs
@@ -104,29 +92,22 @@ class DiffusionInferenceEngine(BaseInferenceEngine):
             msg = "Policy not loaded. Call load_policy() first."
             raise RuntimeError(msg)
 
-        try:
-            # Preprocess inputs
-            processed_images = self.preprocess_images(images)
-            processed_joints = self.preprocess_joint_positions(joint_positions)
+        # Preprocess inputs
+        processed_images = self.preprocess_images(images)
+        processed_joints = self.preprocess_joint_positions(joint_positions)
 
-            # Prepare batch inputs for Diffusion policy
-            batch = self._prepare_batch(processed_images, processed_joints)
+        # Prepare batch inputs for Diffusion policy
+        batch = self._prepare_batch(processed_images, processed_joints)
 
-            # Run inference
-            with torch.no_grad():
-                action = self.policy.predict(batch)
+        # Run inference
+        with torch.no_grad():
+            action = self.policy.predict(batch)
 
-                # Convert to numpy
-                if isinstance(action, torch.Tensor):
-                    action = action.cpu().numpy()
+            # Convert to numpy
+            if isinstance(action, torch.Tensor):
+                action = action.cpu().numpy()
 
-                logger.debug(f"Diffusion policy predicted action shape: {action.shape}")
-                return action
-
-        except Exception as e:
-            logger.exception("Diffusion policy inference failed")
-            msg = f"Diffusion policy inference failed: {e}"
-            raise RuntimeError(msg) from e
+            return action
 
     def _prepare_batch(
         self, images: dict[str, torch.Tensor], joints: torch.Tensor
@@ -157,13 +138,3 @@ class DiffusionInferenceEngine(BaseInferenceEngine):
         batch["observation.state"] = joints
 
         return batch
-
-    def get_model_info(self) -> dict:
-        """Get Diffusion policy-specific model information."""
-        info = super().get_model_info()
-        info.update({
-            "policy_type": "diffusion",
-            "supports_language": self.supports_language,
-            "num_inference_steps": self.num_inference_steps,
-        })
-        return info

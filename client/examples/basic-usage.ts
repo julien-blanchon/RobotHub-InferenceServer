@@ -12,42 +12,99 @@
  */
 
 import { 
-  LeRobotInferenceServerClient
-} from '../src/index';
+  rootGet,
+  healthCheckHealthGet,
+  listSessionsSessionsGet,
+  createSessionSessionsPost,
+  startInferenceSessionsSessionIdStartPost,
+  stopInferenceSessionsSessionIdStopPost,
+  deleteSessionSessionsSessionIdDelete
+} from '../src';
 
 import type { 
   CreateSessionRequest,
   SessionStatusResponse 
-} from '../src/generated';
+} from '../src';
+
+// Configuration
+const BASE_URL = 'http://localhost:8001/api';
+
+// Helper function to wait for a specific session status
+async function waitForSessionStatus(
+  sessionId: string, 
+  targetStatus: string, 
+  timeoutMs: number = 30000
+): Promise<SessionStatusResponse> {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < timeoutMs) {
+    const sessions = await listSessionsSessionsGet({ baseUrl: BASE_URL });
+    const session = sessions.data?.find(s => s.session_id === sessionId);
+    
+    if (session && session.status === targetStatus) {
+      return session;
+    }
+    
+    if (session && session.status === 'error') {
+      throw new Error(`Session failed: ${session.error_message}`);
+    }
+    
+    // Wait 1 second before checking again
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  
+  throw new Error(`Timeout waiting for session ${sessionId} to reach status ${targetStatus}`);
+}
+
+// Helper function to get session status
+async function getSessionStatus(sessionId: string): Promise<SessionStatusResponse> {
+  const sessions = await listSessionsSessionsGet({ baseUrl: BASE_URL });
+  const session = sessions.data?.find(s => s.session_id === sessionId);
+  
+  if (!session) {
+    throw new Error(`Session ${sessionId} not found`);
+  }
+  
+  return session;
+}
 
 async function main() {
-  // Create client instance
-  const client = new LeRobotInferenceServerClient('http://localhost:8001');
-
   try {
     console.log('🔍 Checking server health...');
-    const isHealthy = await client.isHealthy();
-    if (!isHealthy) {
+    const healthResponse = await rootGet({ baseUrl: BASE_URL });
+    if (!healthResponse.data) {
       console.error('❌ Server is not healthy. Make sure the inference server is running.');
       process.exit(1);
     }
     console.log('✅ Server is healthy!');
 
     // Get detailed health info
-    const healthInfo = await client.getHealth();
-    console.log('📊 Server status:', healthInfo);
+    console.log('📊 Getting detailed server status...');
+    const detailedHealth = await healthCheckHealthGet({ baseUrl: BASE_URL });
+    console.log('📊 Server status:', detailedHealth.data);
 
     // Create a session (using generated types)
     const sessionRequest: CreateSessionRequest = {
       session_id: 'example-session-' + Date.now(),
-      policy_path: './checkpoints/act_so101_beyond', // Update with your model path
+      policy_path: 'LaetusH/act_so101_beyond', // HuggingFace repo format
       camera_names: ['front', 'wrist'], // Update with your camera names
-      arena_server_url: 'http://localhost:8000', // Update with your arena server URL
-      workspace_id: null // Let the server generate a workspace ID
+      transport_server_url: 'http://localhost:8000', // Update with your transport server URL
+      workspace_id: null, // Let the server generate a workspace ID
+      policy_type: 'act',
+      language_instruction: null
     };
 
     console.log('🚀 Creating inference session...');
-    const session = await client.createSession(sessionRequest);
+    const sessionResponse = await createSessionSessionsPost({
+      body: sessionRequest,
+      baseUrl: BASE_URL
+    });
+    
+    if (!sessionResponse.data) {
+      throw new Error('Failed to create session');
+    }
+    
+    const session = sessionResponse.data;
     console.log('✅ Session created!');
     console.log('📍 Workspace ID:', session.workspace_id);
     console.log('📷 Camera rooms:', session.camera_room_ids);
@@ -56,12 +113,15 @@ async function main() {
 
     // Start inference
     console.log('▶️ Starting inference...');
-    await client.startInference(sessionRequest.session_id);
+    await startInferenceSessionsSessionIdStartPost({
+      path: { session_id: sessionRequest.session_id },
+      baseUrl: BASE_URL
+    });
     console.log('✅ Inference started!');
 
     // Wait for the session to be running
     console.log('⏳ Waiting for session to be running...');
-    const runningStatus = await client.waitForSessionStatus(
+    const runningStatus = await waitForSessionStatus(
       sessionRequest.session_id, 
       'running', 
       30000 // 30 second timeout
@@ -71,31 +131,36 @@ async function main() {
     // Monitor the session for a few seconds
     console.log('📊 Monitoring session status...');
     for (let i = 0; i < 5; i++) {
-      const status: SessionStatusResponse = await client.getSessionStatus(sessionRequest.session_id);
+      const status: SessionStatusResponse = await getSessionStatus(sessionRequest.session_id);
       console.log(`📈 Status: ${status.status}, Stats:`, status.stats);
       
       // Wait 2 seconds before next check
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
-    // Get system info for debugging
-    console.log('🔧 Getting system information...');
-    const systemInfo = await client.getSystemInfo();
-    console.log('💻 System info:', systemInfo);
-
-    // Get session queue info
-    console.log('📋 Getting session queue info...');
-    const queueInfo = await client.getSessionQueueInfo(sessionRequest.session_id);
-    console.log('📝 Queue info:', queueInfo);
+    // List all sessions for debugging
+    console.log('📋 Getting all sessions...');
+    const allSessions = await listSessionsSessionsGet({ baseUrl: BASE_URL });
+    console.log('📝 All sessions:', allSessions.data?.map(s => ({
+      id: s.session_id,
+      status: s.status,
+      policy_path: s.policy_path
+    })));
 
     // Stop inference
     console.log('⏹️ Stopping inference...');
-    await client.stopInference(sessionRequest.session_id);
+    await stopInferenceSessionsSessionIdStopPost({
+      path: { session_id: sessionRequest.session_id },
+      baseUrl: BASE_URL
+    });
     console.log('✅ Inference stopped!');
 
     // Clean up - delete the session
     console.log('🧹 Cleaning up session...');
-    await client.deleteSession(sessionRequest.session_id);
+    await deleteSessionSessionsSessionIdDelete({
+      path: { session_id: sessionRequest.session_id },
+      baseUrl: BASE_URL
+    });
     console.log('✅ Session deleted!');
 
     console.log('🎉 Example completed successfully!');
@@ -106,25 +171,60 @@ async function main() {
   }
 }
 
-// Alternative: Using the convenience function
+// Alternative: Using a more streamlined approach
 async function quickExample() {
-  const client = new LeRobotInferenceServerClient('http://localhost:8001');
-
   try {
-    // This creates a session and starts inference in one call
-    const result = await client.createAndStartSession({
-      session_id: 'quick-example-' + Date.now(),
-      policy_path: './checkpoints/act_so101_beyond',
-      camera_names: ['front'],
-      arena_server_url: 'http://localhost:8000'
+    // Test health first
+    console.log('🔍 Testing server health...');
+    const healthResponse = await rootGet({ baseUrl: BASE_URL });
+    if (!healthResponse.data) {
+      throw new Error('Server health check failed');
+    }
+    console.log('✅ Server is healthy!');
+    
+    // Create session
+    const sessionId = 'quick-example-' + Date.now();
+    console.log('🚀 Creating session...');
+    
+    const sessionResponse = await createSessionSessionsPost({
+      body: {
+        session_id: sessionId,
+        policy_path: 'LaetusH/act_so101_beyond', // HuggingFace repo format
+        camera_names: ['front'],
+        transport_server_url: 'http://localhost:8000'
+      },
+      baseUrl: BASE_URL
     });
 
-    console.log('🚀 Quick session created and started!');
-    console.log('Session:', result.session);
-    console.log('Status:', result.status);
+    if (!sessionResponse.data) {
+      throw new Error(`Failed to create session: ${sessionResponse.error?.detail || 'Unknown error'}`);
+    }
+
+    console.log('✅ Session created!');
+    console.log('📍 Workspace ID:', sessionResponse.data.workspace_id);
+    console.log('📷 Camera rooms:', sessionResponse.data.camera_room_ids);
+
+    // Start inference
+    console.log('▶️ Starting inference...');
+    await startInferenceSessionsSessionIdStartPost({
+      path: { session_id: sessionId },
+      baseUrl: BASE_URL
+    });
+    console.log('✅ Inference started!');
+
+    // Wait a moment then get status
+    console.log('📊 Checking status...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const status = await getSessionStatus(sessionId);
+    console.log(`📈 Status: ${status.status}`);
+    console.log('📊 Stats:', status.stats);
 
     // Clean up
-    await client.deleteSession(result.status.session_id);
+    console.log('🧹 Cleaning up...');
+    await deleteSessionSessionsSessionIdDelete({
+      path: { session_id: sessionId },
+      baseUrl: BASE_URL
+    });
     console.log('✅ Quick example completed!');
 
   } catch (error) {

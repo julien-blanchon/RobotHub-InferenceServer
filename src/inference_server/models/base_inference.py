@@ -26,12 +26,10 @@ class BaseInferenceEngine(ABC):
         self,
         policy_path: str,
         camera_names: list[str],
-        use_custom_joint_names: bool = True,
         device: str | None = None,
     ):
         self.policy_path = policy_path
         self.camera_names = camera_names
-        self.use_custom_joint_names = use_custom_joint_names
 
         # Device selection
         if device is None:
@@ -45,9 +43,6 @@ class BaseInferenceEngine(ABC):
         self.policy = None
         self.image_transforms = {}  # {camera_name: transform}
         self.stats = None  # Dataset statistics for normalization
-
-        # Joint configuration
-        self.joint_config = JointConfig
 
         # State tracking
         self.is_loaded = False
@@ -122,14 +117,14 @@ class BaseInferenceEngine(ABC):
         Preprocess joint positions for inference.
 
         Args:
-            joint_positions: Array of joint positions in LeRobot standard order
+            joint_positions: Array of joint positions in standard order
 
         Returns:
             Preprocessed joint tensor
 
         """
         # Validate and clamp joint values
-        joint_positions = self.joint_config.validate_joint_values(joint_positions)
+        joint_positions = JointConfig.validate_joint_values(joint_positions)
 
         # Convert to tensor
         joint_tensor = torch.from_numpy(joint_positions).float().to(self.device)
@@ -151,17 +146,17 @@ class BaseInferenceEngine(ABC):
         Convert action array to joint commands with names.
 
         Args:
-            action: Array of joint actions in LeRobot standard order
+            action: Array of joint actions in standard order
 
         Returns:
             List of joint command dictionaries
 
         """
         # Validate action values
-        action = self.joint_config.validate_joint_values(action)
+        action = JointConfig.validate_joint_values(action)
 
-        # Create commands with appropriate names
-        return self.joint_config.create_joint_commands(action)
+        # Create commands with AI names (always use AI names for output)
+        return JointConfig.create_joint_commands(action)
 
     def reset(self):
         """Reset the inference engine state."""
@@ -171,25 +166,6 @@ class BaseInferenceEngine(ABC):
         # Clear any model-specific state
         if hasattr(self.policy, "reset"):
             self.policy.reset()
-
-    def get_model_info(self) -> dict:
-        """Get information about the loaded model."""
-        info = {
-            "policy_path": self.policy_path,
-            "device": str(self.device),
-            "is_loaded": self.is_loaded,
-            "camera_names": self.camera_names,
-            "joint_names": self.joint_config.CUSTOM_JOINT_NAMES
-            if self.use_custom_joint_names
-            else self.joint_config.LEROBOT_JOINT_NAMES,
-        }
-
-        if self.policy:
-            info["model_type"] = type(self.policy).__name__
-            if hasattr(self.policy, "config"):
-                info["model_config"] = str(self.policy.config)
-
-        return info
 
     async def cleanup(self):
         """Clean up resources."""

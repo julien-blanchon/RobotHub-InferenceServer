@@ -1,6 +1,6 @@
-# LeRobot Arena Inference Server TypeScript Client
+# RobotHub Inference Server TypeScript Client
 
-A TypeScript client for the LeRobot Arena Inference Server, providing ACT (Action Chunking Transformer) model inference and session management capabilities.
+A TypeScript client for the RobotHub Inference Server, providing ACT (Action Chunking Transformer) model inference and session management capabilities.
 
 ## Features
 
@@ -26,10 +26,10 @@ bun run build
 ## Quick Start
 
 ```typescript
-import { LeRobotInferenceServerClient, CreateSessionRequest } from '@lerobot-arena/inference-server-client';
+import { RobotHubInferenceClient, CreateSessionRequest } from '@robothub/inference-server-client';
 
 // Create client
-const client = new LeRobotInferenceServerClient('http://localhost:8001');
+const client = new RobotHubInferenceClient('http://localhost:8001');
 
 // Check server health
 const isHealthy = await client.isHealthy();
@@ -41,9 +41,9 @@ if (!isHealthy) {
 // Create and start a session
 const sessionRequest: CreateSessionRequest = {
   session_id: 'my-robot-session',
-  policy_path: './checkpoints/act_so101_beyond',
+  policy_path: 'LaetusH/act_so101_beyond',
   camera_names: ['front', 'wrist'],
-  arena_server_url: 'http://localhost:8000'
+  transport_server_url: 'http://localhost:8000'
 };
 
 const session = await client.createSession(sessionRequest);
@@ -62,7 +62,7 @@ await client.deleteSession('my-robot-session');
 ### Client Creation
 
 ```typescript
-const client = new LeRobotInferenceServerClient(baseUrl: string);
+const client = new RobotHubInferenceClient(baseUrl: string);
 ```
 
 ### Health Check Methods
@@ -104,7 +104,7 @@ import type {
   CreateSessionResponse,
   SessionStatusResponse,
   // ... all other types
-} from '@lerobot-arena/inference-server-client';
+} from '@robothub/inference-server-client';
 ```
 
 Key types:
@@ -149,7 +149,7 @@ bun run generate-client
 ### File Structure
 
 ```
-services/inference-server/client/
+client/
 ├── src/
 │   ├── generated/          # Auto-generated from OpenAPI
 │   │   ├── index.ts        # Generated exports
@@ -167,12 +167,12 @@ services/inference-server/client/
 ## Requirements
 
 - **Bun** >= 1.0.0 (for development and building)
-- **LeRobot Arena Inference Server** running on target URL
-- **LeRobot Arena Transport Server** for communication rooms
+- **RobotHub Inference Server** running on target URL
+- **RobotHub Transport Server** for communication rooms
 
 ## Communication Architecture
 
-The inference server uses the LeRobot Arena communication system:
+The inference server uses the RobotHub communication system:
 
 1. **Camera Rooms**: Receive video streams (supports multiple cameras)
 2. **Joint Input Room**: Receives current robot joint positions (normalized -100 to +100)

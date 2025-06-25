@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Main launcher for the Inference Server
+Main launcher for the RobotHub Inference Server
 
 Integrated application that runs both FastAPI and Gradio on the same port.
 - FastAPI API available at /api with full documentation
@@ -18,7 +18,7 @@ sys.path.insert(0, str(src_path))
 from inference_server.simple_integrated import launch_simple_integrated_app
 
 if __name__ == "__main__":
-    print("🤖 Inference Server (Integrated)")
+    print("🤖 RobotHub Inference Server (Integrated)")
     print("FastAPI + Gradio on the same port!")
     print("API Documentation available at /api/docs")
     print("Press Ctrl+C to stop")
@@ -28,12 +28,17 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Launch integrated Inference Server with FastAPI + Gradio"
+        description="Launch integrated RobotHub Inference Server with FastAPI + Gradio"
     )
     parser.add_argument("--host", default="localhost", help="Host to bind to")
     parser.add_argument("--port", type=int, default=7860, help="Port to bind to")
     parser.add_argument(
         "--share", action="store_true", help="Create public Gradio link"
+    )
+    parser.add_argument(
+        "--transport-server-url",
+        default="http://localhost:8000",
+        help="Transport server URL",
     )
 
     args = parser.parse_args()
@@ -41,6 +46,12 @@ if __name__ == "__main__":
     print(f"🚀 Starting on {args.host}:{args.port}")
     print(f"🎨 Gradio UI: http://{args.host}:{args.port}/")
     print(f"📖 API Docs: http://{args.host}:{args.port}/api/docs")
+    print(f"🚌 Transport Server: {args.transport_server_url}")
     print()
 
-    launch_simple_integrated_app(host=args.host, port=args.port, share=args.share)
+    launch_simple_integrated_app(
+        host=args.host,
+        port=args.port,
+        share=args.share,
+        transport_server_url=args.transport_server_url,
+    )

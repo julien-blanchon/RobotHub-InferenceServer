@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Inference Server",
+    "title": "RobotHub Inference Server",
     "summary": "ACT Model Inference Server for Real-time Robot Control",
     "version": "1.0.0"
   },
@@ -34,26 +34,6 @@
         "summary": "Health Check",
         "description": "Detailed health check.",
         "operationId": "health_check_health_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/policies": {
-      "get": {
-        "tags": [
-          "Policies"
-        ],
-        "summary": "List Policies",
-        "description": "List supported policy types.",
-        "operationId": "list_policies_policies_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -116,88 +96,6 @@
                 "schema": {
                   "$ref": "#/components/schemas/CreateSessionResponse"
                 }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/sessions/{session_id}": {
-      "get": {
-        "tags": [
-          "Sessions"
-        ],
-        "summary": "Get Session Status",
-        "description": "Get status of a specific session.",
-        "operationId": "get_session_status_sessions__session_id__get",
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SessionStatusResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Sessions"
-        ],
-        "summary": "Delete Session",
-        "description": "Delete a session.",
-        "operationId": "delete_session_sessions__session_id__delete",
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
               }
             }
           },
@@ -337,95 +235,14 @@
         }
       }
     },
-    "/debug/system": {
-      "get": {
+    "/sessions/{session_id}": {
+      "delete": {
         "tags": [
-          "Debug"
+          "Sessions"
         ],
-        "summary": "Get System Info",
-        "description": "Get system information for debugging.",
-        "operationId": "get_system_info_debug_system_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/debug/logs": {
-      "get": {
-        "tags": [
-          "Debug"
-        ],
-        "summary": "Get Recent Logs",
-        "description": "Get recent log entries for debugging.",
-        "operationId": "get_recent_logs_debug_logs_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/debug/sessions/{session_id}/reset": {
-      "post": {
-        "tags": [
-          "Debug"
-        ],
-        "summary": "Debug Reset Session",
-        "description": "Reset a session's internal state for debugging.",
-        "operationId": "debug_reset_session_debug_sessions__session_id__reset_post",
-        "parameters": [
-          {
-            "name": "session_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Session Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/debug/sessions/{session_id}/queue": {
-      "get": {
-        "tags": [
-          "Debug"
-        ],
-        "summary": "Get Session Queue Info",
-        "description": "Get detailed information about a session's action queue.",
-        "operationId": "get_session_queue_info_debug_sessions__session_id__queue_get",
+        "summary": "Delete Session",
+        "description": "Delete a session.",
+        "operationId": "delete_session_sessions__session_id__delete",
         "parameters": [
           {
             "name": "session_id",
@@ -482,9 +299,9 @@
               "front"
             ]
           },
-          "arena_server_url": {
+          "transport_server_url": {
             "type": "string",
-            "title": "Arena Server Url",
+            "title": "Transport Server Url",
             "default": "http://localhost:8000"
           },
           "workspace_id": {

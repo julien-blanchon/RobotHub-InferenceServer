@@ -1,5 +1,5 @@
 // @bun
-// src/generated/schemas.gen.ts
+// src/schemas.gen.ts
 var CreateSessionRequestSchema = {
   properties: {
     session_id: {
@@ -18,9 +18,9 @@ var CreateSessionRequestSchema = {
       title: "Camera Names",
       default: ["front"]
     },
-    arena_server_url: {
+    transport_server_url: {
       type: "string",
-      title: "Arena Server Url",
+      title: "Transport Server Url",
       default: "http://localhost:8000"
     },
     workspace_id: {
@@ -190,7 +190,7 @@ var ValidationErrorSchema = {
   required: ["loc", "msg", "type"],
   title: "ValidationError"
 };
-// node_modules/@hey-api/client-fetch/dist/node/index.mjs
+// ../../../node_modules/@hey-api/client-fetch/dist/node/index.mjs
 var e = /\{[^{}]+\}/g;
 var t = ({ allowReserved: e2, name: t2, value: r }) => {
   if (r == null)
@@ -373,7 +373,7 @@ var b = (e2 = {}) => {
   return { connect: (e3) => c({ ...e3, method: "CONNECT" }), delete: (e3) => c({ ...e3, method: "DELETE" }), get: (e3) => c({ ...e3, method: "GET" }), getConfig: r2, head: (e3) => c({ ...e3, method: "HEAD" }), interceptors: s2, options: (e3) => c({ ...e3, method: "OPTIONS" }), patch: (e3) => c({ ...e3, method: "PATCH" }), post: (e3) => c({ ...e3, method: "POST" }), put: (e3) => c({ ...e3, method: "PUT" }), request: c, setConfig: (e3) => (t2 = o(t2, e3), r2()), trace: (e3) => c({ ...e3, method: "TRACE" }) };
 };
 
-// src/generated/services.gen.ts
+// src/services.gen.ts
 var client = b(m());
 var rootGet = (options) => {
   return (options?.client ?? client).get({
@@ -387,12 +387,6 @@ var healthCheckHealthGet = (options) => {
     url: "/health"
   });
 };
-var listPoliciesPoliciesGet = (options) => {
-  return (options?.client ?? client).get({
-    ...options,
-    url: "/policies"
-  });
-};
 var listSessionsSessionsGet = (options) => {
   return (options?.client ?? client).get({
     ...options,
@@ -403,18 +397,6 @@ var createSessionSessionsPost = (options) => {
   return (options?.client ?? client).post({
     ...options,
     url: "/sessions"
-  });
-};
-var getSessionStatusSessionsSessionIdGet = (options) => {
-  return (options?.client ?? client).get({
-    ...options,
-    url: "/sessions/{session_id}"
-  });
-};
-var deleteSessionSessionsSessionIdDelete = (options) => {
-  return (options?.client ?? client).delete({
-    ...options,
-    url: "/sessions/{session_id}"
   });
 };
 var startInferenceSessionsSessionIdStartPost = (options) => {
@@ -435,180 +417,28 @@ var restartInferenceSessionsSessionIdRestartPost = (options) => {
     url: "/sessions/{session_id}/restart"
   });
 };
-var getSystemInfoDebugSystemGet = (options) => {
-  return (options?.client ?? client).get({
+var deleteSessionSessionsSessionIdDelete = (options) => {
+  return (options?.client ?? client).delete({
     ...options,
-    url: "/debug/system"
+    url: "/sessions/{session_id}"
   });
 };
-var getRecentLogsDebugLogsGet = (options) => {
-  return (options?.client ?? client).get({
-    ...options,
-    url: "/debug/logs"
-  });
-};
-var debugResetSessionDebugSessionsSessionIdResetPost = (options) => {
-  return (options?.client ?? client).post({
-    ...options,
-    url: "/debug/sessions/{session_id}/reset"
-  });
-};
-var getSessionQueueInfoDebugSessionsSessionIdQueueGet = (options) => {
-  return (options?.client ?? client).get({
-    ...options,
-    url: "/debug/sessions/{session_id}/queue"
-  });
-};
-// src/index.ts
-class LeRobotInferenceServerClient {
-  baseUrl;
-  constructor(baseUrl) {
-    this.baseUrl = baseUrl;
-    client.setConfig({ baseUrl });
-  }
-  async isHealthy() {
-    try {
-      const response = await healthCheckHealthGet();
-      return !response.error;
-    } catch {
-      return false;
-    }
-  }
-  async getHealth() {
-    const response = await healthCheckHealthGet();
-    if (response.error) {
-      throw new Error(`Health check failed: ${JSON.stringify(response.error)}`);
-    }
-    return response.data;
-  }
-  async createSession(request) {
-    const response = await createSessionSessionsPost({
-      body: request
-    });
-    if (response.error) {
-      throw new Error(`Failed to create session: ${JSON.stringify(response.error)}`);
-    }
-    return response.data;
-  }
-  async listSessions() {
-    const response = await listSessionsSessionsGet();
-    if (response.error) {
-      throw new Error(`Failed to list sessions: ${JSON.stringify(response.error)}`);
-    }
-    return response.data;
-  }
-  async getSessionStatus(sessionId) {
-    const response = await getSessionStatusSessionsSessionIdGet({
-      path: { session_id: sessionId }
-    });
-    if (response.error) {
-      throw new Error(`Failed to get session status: ${JSON.stringify(response.error)}`);
-    }
-    return response.data;
-  }
-  async startInference(sessionId) {
-    const response = await startInferenceSessionsSessionIdStartPost({
-      path: { session_id: sessionId }
-    });
-    if (response.error) {
-      throw new Error(`Failed to start inference: ${JSON.stringify(response.error)}`);
-    }
-  }
-  async stopInference(sessionId) {
-    const response = await stopInferenceSessionsSessionIdStopPost({
-      path: { session_id: sessionId }
-    });
-    if (response.error) {
-      throw new Error(`Failed to stop inference: ${JSON.stringify(response.error)}`);
-    }
-  }
-  async restartInference(sessionId) {
-    const response = await restartInferenceSessionsSessionIdRestartPost({
-      path: { session_id: sessionId }
-    });
-    if (response.error) {
-      throw new Error(`Failed to restart inference: ${JSON.stringify(response.error)}`);
-    }
-  }
-  async deleteSession(sessionId) {
-    const response = await deleteSessionSessionsSessionIdDelete({
-      path: { session_id: sessionId }
-    });
-    if (response.error) {
-      throw new Error(`Failed to delete session: ${JSON.stringify(response.error)}`);
-    }
-  }
-  async waitForSessionStatus(sessionId, targetStatus, timeoutMs = 30000) {
-    const startTime = Date.now();
-    while (Date.now() - startTime < timeoutMs) {
-      const status = await this.getSessionStatus(sessionId);
-      if (status.status === targetStatus) {
-        return status;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
-    throw new Error(`Timeout waiting for session ${sessionId} to reach status ${targetStatus}`);
-  }
-  async createAndStartSession(request) {
-    const session = await this.createSession(request);
-    await this.startInference(request.session_id);
-    const status = await this.waitForSessionStatus(request.session_id, "running");
-    return { session, status };
-  }
-  async getSystemInfo() {
-    const response = await getSystemInfoDebugSystemGet();
-    if (response.error) {
-      throw new Error(`Failed to get system info: ${JSON.stringify(response.error)}`);
-    }
-    return response.data;
-  }
-  async debugResetSession(sessionId) {
-    const response = await debugResetSessionDebugSessionsSessionIdResetPost({
-      path: { session_id: sessionId }
-    });
-    if (response.error) {
-      throw new Error(`Failed to reset session: ${JSON.stringify(response.error)}`);
-    }
-  }
-  async getSessionQueueInfo(sessionId) {
-    const response = await getSessionQueueInfoDebugSessionsSessionIdQueueGet({
-      path: { session_id: sessionId }
-    });
-    if (response.error) {
-      throw new Error(`Failed to get queue info: ${JSON.stringify(response.error)}`);
-    }
-    return response.data;
-  }
-}
-function createClient(baseUrl) {
-  return new LeRobotInferenceServerClient(baseUrl);
-}
-var LeRobotAIServerClient = LeRobotInferenceServerClient;
 export {
   stopInferenceSessionsSessionIdStopPost,
   startInferenceSessionsSessionIdStartPost,
   rootGet,
   restartInferenceSessionsSessionIdRestartPost,
   listSessionsSessionsGet,
-  listPoliciesPoliciesGet,
   healthCheckHealthGet,
-  getSystemInfoDebugSystemGet,
-  getSessionStatusSessionsSessionIdGet,
-  getSessionQueueInfoDebugSessionsSessionIdQueueGet,
-  getRecentLogsDebugLogsGet,
   deleteSessionSessionsSessionIdDelete,
-  debugResetSessionDebugSessionsSessionIdResetPost,
   createSessionSessionsPost,
-  createClient,
   client,
   ValidationErrorSchema,
   SessionStatusResponseSchema,
-  LeRobotInferenceServerClient,
-  LeRobotAIServerClient,
   HTTPValidationErrorSchema,
   CreateSessionResponseSchema,
   CreateSessionRequestSchema
 };
 
-//# debugId=2097EAE219935B0E64756E2164756E21
+//# debugId=578200F5AF3D5E0564756E2164756E21
 //# sourceMappingURL=index.js.map

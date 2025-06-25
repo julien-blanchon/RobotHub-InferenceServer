@@ -4,56 +4,20 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import yaml
 from fastapi.openapi.utils import get_openapi
+from openapi_spec_validator import validate_spec
 
-try:
-    import yaml
-
-    YAML_AVAILABLE = True
-except ImportError:
-    YAML_AVAILABLE = False
-
-
-def get_app_instance():
-    """
-    Import and return the FastAPI app instance.
-
-    Returns:
-        FastAPI: The main FastAPI application instance
-
-    Raises:
-        ImportError: If the app cannot be imported
-
-    """
-    try:
-        from inference_server.main import app
-
-        return app
-    except ImportError as e:
-        print(f"❌ Error importing FastAPI app: {e}")
-        print(
-            "Make sure you're running this from the correct directory and all dependencies are installed"
-        )
-        sys.exit(1)
+from inference_server.main import app
 
 
 def create_custom_openapi_schema(app) -> dict[str, Any]:
-    """
-    Create a customized OpenAPI schema with enhanced metadata.
-
-    Args:
-        app: FastAPI application instance
-
-    Returns:
-        Dict[str, Any]: Complete OpenAPI schema dictionary
-
-    """
     if app.openapi_schema:
         return app.openapi_schema
 
     # Generate the base OpenAPI schema
     openapi_schema = get_openapi(
-        title="Inference Server",
+        title="RobotHub Inference Server",
         version="1.0.0",
         summary="ACT Model Inference Server for Real-time Robot Control",
         routes=app.routes,
@@ -92,31 +56,11 @@ def create_custom_openapi_schema(app) -> dict[str, Any]:
 def export_openapi_schema(
     output_file: str | None = None, format_type: str = "json"
 ) -> dict[str, Any]:
-    """
-    Export the OpenAPI schema to a file or return it as a dictionary.
-
-    Args:
-        output_file (str, optional): Path to save the schema. If None, returns the schema dict.
-        format_type (str): Format to export - 'json' or 'yaml'
-
-    Returns:
-        Dict[str, Any]: The OpenAPI schema dictionary
-
-    Raises:
-        ValueError: If format_type is not supported
-        ImportError: If YAML is requested but not available
-
-    """
     if format_type not in {"json", "yaml"}:
         msg = f"Unsupported format: {format_type}. Use 'json' or 'yaml'"
         raise ValueError(msg)
 
-    if format_type == "yaml" and not YAML_AVAILABLE:
-        msg = "PyYAML is required for YAML export. Install with: pip install pyyaml"
-        raise ImportError(msg)
-
     # Get the FastAPI app and generate schema
-    app = get_app_instance()
     openapi_schema = create_custom_openapi_schema(app)
 
     # If no output file specified, return the schema
@@ -128,30 +72,25 @@ def export_openapi_schema(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Save to file
-    try:
-        with open(output_path, "w", encoding="utf-8") as f:
-            if format_type == "json":
-                json.dump(openapi_schema, f, indent=2, ensure_ascii=False)
-            else:  # yaml
-                yaml.dump(
-                    openapi_schema,
-                    f,
-                    default_flow_style=False,
-                    allow_unicode=True,
-                    sort_keys=False,
-                )
+    with output_path.open("w", encoding="utf-8") as f:
+        if format_type == "json":
+            json.dump(openapi_schema, f, indent=2, ensure_ascii=False)
+        else:  # yaml
+            yaml.dump(
+                openapi_schema,
+                f,
+                default_flow_style=False,
+                allow_unicode=True,
+                sort_keys=False,
+            )
 
-        print(f"✅ OpenAPI schema exported to {output_path}")
-        print(f"📄 Format: {format_type.upper()}")
-        print(
-            f"📊 Endpoints: {len([route for route in app.routes if hasattr(route, 'methods')])}"
-        )
+    print(f"✅ OpenAPI schema exported to {output_path}")
+    print(f"📄 Format: {format_type.upper()}")
+    print(
+        f"📊 Endpoints: {len([route for route in app.routes if hasattr(route, 'methods')])}"
+    )
 
-        return openapi_schema
-
-    except Exception as e:
-        print(f"❌ Error saving OpenAPI schema: {e}")
-        sys.exit(1)
+    return openapi_schema
 
 
 def main():
@@ -231,24 +170,19 @@ Examples:
         # Validate schema if requested
         if args.validate:
             try:
-                from openapi_spec_validator import validate_spec
-
                 validate_spec(schema)
                 print("✅ Schema validation passed")
             except ImportError:
                 print(
                     "⚠️ Validation skipped: install openapi-spec-validator for validation"
                 )
-            except Exception as e:
-                print(f"❌ Schema validation failed: {e}")
-                sys.exit(1)
 
     except KeyboardInterrupt:
         print("\n🛑 Export cancelled by user")
         sys.exit(1)
     except Exception as e:
         print(f"❌ Export failed: {e}")
-        sys.exit(1)
+        raise e from e
 
 
 if __name__ == "__main__":

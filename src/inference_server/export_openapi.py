@@ -6,7 +6,7 @@ from typing import Any
 
 import yaml
 from fastapi.openapi.utils import get_openapi
-from openapi_spec_validator import validate_spec
+
 
 from inference_server.main import app
 
@@ -170,6 +170,7 @@ Examples:
         # Validate schema if requested
         if args.validate:
             try:
+                from openapi_spec_validator import validate_spec
                 validate_spec(schema)
                 print("✅ Schema validation passed")
             except ImportError:

@@ -3,7 +3,7 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 # Parameterize port with default value
 ARG PORT=8001
-ARG TRANSPORT_SERVER_URL=https://blanchon-robothub-transportserver.hf.space
+ARG TRANSPORT_SERVER_URL=https://blanchon-robothub-transportserver.hf.space/api
 
 # Set environment variables for Python and UV
 ENV PYTHONUNBUFFERED=1 \

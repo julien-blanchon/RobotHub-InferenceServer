@@ -72,4 +72,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/api/health')" || exit 1
 
 # Run the application
-CMD ["sh", "-c", "python launch_simple.py --host localhost --port ${PORT} --transport-server-url ${TRANSPORT_SERVER_URL}"] 
+CMD ["sh", "-c", "python launch_simple.py --host 0.0.0.0 --port ${PORT} --transport-server-url ${TRANSPORT_SERVER_URL}"] 

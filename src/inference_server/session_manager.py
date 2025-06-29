@@ -155,11 +155,6 @@ class InferenceSession:
         # Connect to rooms
         await self._connect_to_rooms()
 
-        # Start receiving video frames from all cameras
-        for camera_name, consumer in self.camera_consumers.items():
-            await consumer.start_receiving()
-            logger.info(f"Started receiving frames for camera: {camera_name}")
-
         # Start timeout monitoring
         self.timeout_check_task = asyncio.create_task(self._timeout_monitor())
 
@@ -306,6 +301,12 @@ class InferenceSession:
             logger.error(msg)
 
         self.status = "running"
+
+        # Start receiving video frames from all cameras
+        for camera_name, consumer in self.camera_consumers.items():
+            await consumer.start_receiving()
+            logger.info(f"Started receiving frames for camera: {camera_name}")
+
         self.inference_task = asyncio.create_task(self._inference_loop())
         logger.info(f"Started inference for session {self.session_id}")
 

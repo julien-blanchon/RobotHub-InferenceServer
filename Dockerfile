@@ -59,12 +59,12 @@ COPY --chown=appuser:appuser . .
 RUN --mount=type=cache,target=/tmp/uv-cache \
     uv sync --locked --no-editable --no-dev
 
+# Switch to non-root user
+USER appuser
+
 # Create cache directories for Hugging Face with proper ownership
 RUN mkdir -p /app/.cache/hub && \
     chown -R appuser:appuser /app/.cache
-
-# Switch to non-root user
-USER appuser
 
 # Add virtual environment to PATH
 ENV PATH="/app/.venv/bin:$PATH"

@@ -13,7 +13,6 @@ ENV PYTHONUNBUFFERED=1 \
     UV_CACHE_DIR=/tmp/uv-cache \
     PORT=${PORT} \
     TRANSPORT_SERVER_URL=${TRANSPORT_SERVER_URL} \
-    HF_HOME=/app/.cache
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -55,10 +54,6 @@ COPY . .
 # Install the project in non-editable mode for production
 RUN --mount=type=cache,target=/tmp/uv-cache \
     uv sync --locked --no-editable --no-dev
-
-# Create cache directories for Hugging Face
-RUN mkdir -p /app/.cache/hub
-RUN chmod -R 777 /app/.cache/hub
 
 # Add virtual environment to PATH
 ENV PATH="/app/.venv/bin:$PATH"

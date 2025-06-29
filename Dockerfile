@@ -12,7 +12,8 @@ ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_CACHE_DIR=/tmp/uv-cache \
     PORT=${PORT} \
-    TRANSPORT_SERVER_URL=${TRANSPORT_SERVER_URL}
+    TRANSPORT_SERVER_URL=${TRANSPORT_SERVER_URL} \
+    HF_HOME=/app/.cache
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -57,6 +58,10 @@ RUN --mount=type=cache,target=/tmp/uv-cache \
 
 # Add virtual environment to PATH
 ENV PATH="/app/.venv/bin:$PATH"
+
+RUN mkdir -p /app/.cache
+RUN mkdir -p /app/.cache/hub
+RUN chmod -R 777 /app/.cache
 
 # Expose port (parameterized)
 EXPOSE ${PORT}

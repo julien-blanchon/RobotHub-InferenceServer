@@ -13,7 +13,7 @@ ENV PYTHONUNBUFFERED=1 \
     UV_CACHE_DIR=/tmp/uv-cache \
     PORT=${PORT} \
     TRANSPORT_SERVER_URL=${TRANSPORT_SERVER_URL} \
-    HF_HOME=/home/appuser/.cache
+    HF_HOME=/app/.cache
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -36,38 +36,31 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user
-RUN groupadd -r appuser && useradd -r -g appuser -m -s /bin/bash appuser
-
 # Set working directory
-WORKDIR /home/appuser
+WORKDIR /app
 
 # Copy dependency files for better layer caching
-COPY --chown=appuser:appuser pyproject.toml uv.lock* ./
+COPY pyproject.toml uv.lock* ./
 
 # Copy external dependencies (submodules) needed for dependency resolution
-COPY --chown=appuser:appuser external/ ./external/
+COPY external/ ./external/
 
 # Install dependencies first (better caching)
 RUN --mount=type=cache,target=/tmp/uv-cache \
     uv sync --locked --no-install-project --no-dev
 
 # Copy the rest of the application
-COPY --chown=appuser:appuser . .
+COPY . .
 
 # Install the project in non-editable mode for production
 RUN --mount=type=cache,target=/tmp/uv-cache \
     uv sync --locked --no-editable --no-dev
 
-# Create cache directories for Hugging Face with proper ownership (as root)
-RUN mkdir -p /home/appuser/.cache/hub && \
-    chown -R appuser:appuser /home/appuser/.cache
-
-# Switch to non-root user
-USER appuser
+# Create cache directories for Hugging Face
+RUN mkdir -p /app/.cache/hub
 
 # Add virtual environment to PATH
-ENV PATH="/home/appuser/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Expose port (parameterized)
 EXPOSE ${PORT}

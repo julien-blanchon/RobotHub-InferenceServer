@@ -7,7 +7,6 @@ from typing import Any
 import yaml
 from fastapi.openapi.utils import get_openapi
 
-
 from inference_server.main import app
 
 
@@ -29,7 +28,7 @@ def create_custom_openapi_schema(app) -> dict[str, Any]:
         {"name": "Health", "description": "Health check and server status endpoints"},
         {
             "name": "Sessions",
-            "description": "Inference session management - create, control, and monitor AI sessions",
+            "description": "Inference session management - create, control, and monitor Inference Sessions",
         },
         {
             "name": "Control",
@@ -171,6 +170,7 @@ Examples:
         if args.validate:
             try:
                 from openapi_spec_validator import validate_spec
+
                 validate_spec(schema)
                 print("✅ Schema validation passed")
             except ImportError:

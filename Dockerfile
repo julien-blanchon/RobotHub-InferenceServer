@@ -12,7 +12,8 @@ ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_CACHE_DIR=/tmp/uv-cache \
     PORT=${PORT} \
-    TRANSPORT_SERVER_URL=${TRANSPORT_SERVER_URL}
+    TRANSPORT_SERVER_URL=${TRANSPORT_SERVER_URL} \
+    HF_HOME=/app/.cache
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -57,6 +58,10 @@ COPY --chown=appuser:appuser . .
 # Install the project in non-editable mode for production
 RUN --mount=type=cache,target=/tmp/uv-cache \
     uv sync --locked --no-editable --no-dev
+
+# Create cache directories for Hugging Face with proper ownership
+RUN mkdir -p /app/.cache && \
+    chown -R appuser:appuser /app/.cache
 
 # Switch to non-root user
 USER appuser

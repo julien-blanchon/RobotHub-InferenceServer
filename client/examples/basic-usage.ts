@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Basic Usage Example for LeRobot Arena Inference Server TypeScript Client
+ * Basic Usage Example for RobotHub Inference Server TypeScript Client
  * 
  * This example demonstrates how to:
  * 1. Create a client instance
@@ -234,7 +234,7 @@ async function quickExample() {
 
 // Run the main example
 if (import.meta.main) {
-  console.log('=== LeRobot Arena Inference Server Client Example ===\n');
+  console.log('=== RobotHub Inference Server Client Example ===\n');
   
   // Choose which example to run based on command line argument
   const runQuick = process.argv.includes('--quick');

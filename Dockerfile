@@ -1,80 +1,71 @@
-# Use official UV base image with Python 3.12
+# Base image with uv + Python 3.12
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
-# Parameterize port with default value
+# ---------- build-time args ----------
 ARG PORT=8001
 ARG TRANSPORT_SERVER_URL=https://blanchon-robothub-transportserver.hf.space/api
 
-# Set environment variables for Python and UV
-ENV PYTHONUNBUFFERED=1 \
+# ---------- system packages ----------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential gcc g++ \
+        libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1 \
+        ffmpeg git \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# ---------- non-root user ----------
+RUN groupadd -r appuser && useradd -m -r -g appuser -s /bin/bash appuser
+
+# ---------- working dir ----------
+WORKDIR /app
+
+# ---------- copy manifests (as root, but owned by appuser) ----------
+COPY --chown=appuser:appuser pyproject.toml uv.lock* ./
+COPY --chown=appuser:appuser external/ ./external/
+
+# ---------- switch to non-root BEFORE anything that downloads ----------
+USER appuser
+
+# ---------- cache locations (all writable) ----------
+ENV \
+    # generic caches
+    XDG_CACHE_HOME=/home/appuser/.cache \
+    # huggingface-hub + datasets
+    HF_HOME=/home/appuser/.cache \
+    HF_HUB_CACHE=/home/appuser/.cache/hub \
+    HUGGINGFACE_HUB_CACHE=/home/appuser/.cache/hub \
+    # transformers
+    TRANSFORMERS_CACHE=/home/appuser/.cache/huggingface/hub \
+    # uv & app settings
+    PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     UV_SYSTEM_PYTHON=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_CACHE_DIR=/tmp/uv-cache \
     PORT=${PORT} \
-    TRANSPORT_SERVER_URL=${TRANSPORT_SERVER_URL} \
-    HF_HOME=/home/appuser/.cache \
-    HF_HUB_CACHE=/home/appuser/.cache/hub
+    TRANSPORT_SERVER_URL=${TRANSPORT_SERVER_URL}
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    # Build tools for compiling Python packages
-    build-essential \
-    gcc \
-    g++ \
-    # Essential system libraries
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgomp1 \
-    # FFmpeg for video processing
-    ffmpeg \
-    # Git for potential model downloads
-    git \
-    # Clean up
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# make sure cache dirs exist
+RUN mkdir -p $HF_HUB_CACHE $TRANSFORMERS_CACHE
 
-# Create a non-root user
-RUN groupadd -r appuser && useradd -r -g appuser -m -s /bin/bash appuser
-
-# Set working directory
-WORKDIR /app
-
-# Copy dependency files for better layer caching
-COPY --chown=appuser:appuser pyproject.toml uv.lock* ./
-
-# Copy external dependencies (submodules) needed for dependency resolution
-COPY --chown=appuser:appuser external/ ./external/
-
-# Install dependencies first (better caching)
+# ---------- install dependencies ----------
 RUN --mount=type=cache,target=/tmp/uv-cache \
     uv sync --locked --no-install-project --no-dev
 
-# Copy the rest of the application
+# ---------- copy application code ----------
 COPY --chown=appuser:appuser . .
 
-# Install the project in non-editable mode for production
+# ---------- install project itself ----------
 RUN --mount=type=cache,target=/tmp/uv-cache \
     uv sync --locked --no-editable --no-dev
 
-# Switch to non-root user
-USER appuser
-
-# Create cache directories for Hugging Face in user home directory
-RUN mkdir -p /home/appuser/.cache/hub /home/appuser/.cache/transformers /home/appuser/.cache/datasets
-
-# Add virtual environment to PATH
+# ---------- virtual-env path ----------
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Expose port (parameterized)
+# ---------- network / health ----------
 EXPOSE ${PORT}
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/api/health')" || exit 1
+    CMD python -c "import urllib.request, os; urllib.request.urlopen(f'http://localhost:{os.getenv(\"PORT\")}/api/health')" || exit 1
 
-# Run the application
-CMD ["sh", "-c", "python launch_simple.py --host 0.0.0.0 --port ${PORT} --transport-server-url ${TRANSPORT_SERVER_URL}"] 
+# ---------- run ----------
+CMD ["sh", "-c", "python launch_simple.py --host 0.0.0.0 --port ${PORT} --transport-server-url ${TRANSPORT_SERVER_URL}"]

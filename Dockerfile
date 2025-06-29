@@ -13,7 +13,7 @@ ENV PYTHONUNBUFFERED=1 \
     UV_CACHE_DIR=/tmp/uv-cache \
     PORT=${PORT} \
     TRANSPORT_SERVER_URL=${TRANSPORT_SERVER_URL} \
-    HF_HOME=/app/.cache
+    HF_HOME=/home/appuser/.cache
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -40,7 +40,7 @@ RUN apt-get update && apt-get install -y \
 RUN groupadd -r appuser && useradd -r -g appuser -m -s /bin/bash appuser
 
 # Set working directory
-WORKDIR /app
+WORKDIR /home/appuser
 
 # Copy dependency files for better layer caching
 COPY --chown=appuser:appuser pyproject.toml uv.lock* ./
@@ -63,11 +63,11 @@ RUN --mount=type=cache,target=/tmp/uv-cache \
 USER appuser
 
 # Create cache directories for Hugging Face with proper ownership
-RUN mkdir -p /app/.cache/hub && \
-    chown -R appuser:appuser /app/.cache
+RUN mkdir -p /home/appuser/.cache/hub && \
+    chown -R appuser:appuser /home/appuser/.cache
 
 # Add virtual environment to PATH
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/home/appuser/.venv/bin:$PATH"
 
 # Expose port (parameterized)
 EXPOSE ${PORT}

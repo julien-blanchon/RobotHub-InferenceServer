@@ -13,19 +13,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # ---------- app user ----------
 RUN groupadd -r appuser && useradd -m -r -g appuser -s /bin/bash appuser
-USER appuser                           # ←─── switch early!
 
-# ---------- directories & env ----------
+# ---------- cache directories & environment ----------
 ENV HOME=/home/appuser
 ENV \
-    # Hugging-Face / transformers caches
     HF_HOME=$HOME/.cache \
     HF_HUB_CACHE=$HOME/.cache/hub \
     HUGGINGFACE_HUB_CACHE=$HOME/.cache/hub \
     TRANSFORMERS_CACHE=$HOME/.cache/huggingface/hub \
-    # uv’s compilation / wheel cache
     UV_CACHE_DIR=$HOME/.cache/uv \
-    # python / app settings
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     UV_SYSTEM_PYTHON=1 \
@@ -33,7 +29,12 @@ ENV \
     PORT=${PORT} \
     TRANSPORT_SERVER_URL=${TRANSPORT_SERVER_URL}
 
-RUN mkdir -p "$HF_HUB_CACHE" "$TRANSFORMERS_CACHE" "$UV_CACHE_DIR"
+# create the caches while still root, then chown to appuser
+RUN mkdir -p "$HF_HUB_CACHE" "$TRANSFORMERS_CACHE" "$UV_CACHE_DIR" \
+    && chown -R appuser:appuser "$HOME/.cache"
+
+# switch to non-root user (no inline comment!)
+USER appuser
 
 # ---------- workdir ----------
 WORKDIR /app

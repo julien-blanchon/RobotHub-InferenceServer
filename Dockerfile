@@ -12,7 +12,7 @@ ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_CACHE_DIR=/tmp/uv-cache \
     PORT=${PORT} \
-    TRANSPORT_SERVER_URL=${TRANSPORT_SERVER_URL} \
+    TRANSPORT_SERVER_URL=${TRANSPORT_SERVER_URL}
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \

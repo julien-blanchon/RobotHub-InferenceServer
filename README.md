@@ -104,7 +104,6 @@ python -m inference_server.cli --server-only --host localhost --port 8080
 # Build and run
 docker build -t robothub-inference-server .
 docker run -p 7860:7860 \
-  -v /path/to/your/models:/app/checkpoints \
   robothub-inference-server
 ```
 

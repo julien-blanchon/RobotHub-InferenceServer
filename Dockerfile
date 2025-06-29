@@ -58,6 +58,7 @@ RUN --mount=type=cache,target=/tmp/uv-cache \
 
 # Create cache directories for Hugging Face
 RUN mkdir -p /app/.cache/hub
+RUN chmod -R 777 /app/.cache/hub
 
 # Add virtual environment to PATH
 ENV PATH="/app/.venv/bin:$PATH"

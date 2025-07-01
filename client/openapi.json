@@ -513,7 +513,7 @@
     },
     {
       "name": "Sessions",
-      "description": "Inference session management - create, control, and monitor AI sessions"
+      "description": "Inference session management - create, control, and monitor Inference Sessions"
     },
     {
       "name": "Control",
